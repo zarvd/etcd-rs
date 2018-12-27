@@ -7,3 +7,6 @@ description = "etcd client for rust"
 license = "MIT"
 
 [dependencies]
+grpcio = "0.4"
+futures = "^0.1.15"
+protobuf =  "2.0"
