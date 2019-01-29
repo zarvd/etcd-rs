@@ -10,3 +10,6 @@ license = "MIT"
 grpcio = "0.4"
 futures = "^0.1.15"
 protobuf =  "2.0"
+
+[dev-dependencies]
+tokio = "0.1.15"

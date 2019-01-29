@@ -1,21 +1,24 @@
 use std::sync::Arc;
 
+use grpcio::{Channel, ChannelBuilder, EnvBuilder};
+
 use crate::proto::rpc_grpc::{
     AuthClient, ClusterClient, KvClient, LeaseClient, MaintenanceClient, WatchClient,
 };
-use grpcio::{Channel, ChannelBuilder, EnvBuilder};
+
+use crate::{Cluster, Kv};
 
 pub struct Client {
     inner: Arc<Inner>,
 }
 
 impl Client {
-    pub fn cluster(&self) -> &ClusterClient {
-        &self.inner.cluster
+    pub fn cluster(&self) -> Cluster {
+        Cluster::new(self.inner.clone())
     }
 
-    pub fn kv(&self) -> &KvClient {
-        &self.inner.kv
+    pub fn kv(&self) -> Kv {
+        Kv::new(self.inner.clone())
     }
 
     pub fn auth(&self) -> &AuthClient {
@@ -33,6 +36,13 @@ impl Client {
     pub fn maintenance(&self) -> &MaintenanceClient {
         &self.inner.maintenance
     }
+
+    pub fn builder() -> ClientBuilder {
+        ClientBuilder {
+            endpoints: Default::default(),
+            auth: None,
+        }
+    }
 }
 
 pub struct ClientBuilder {
@@ -43,6 +53,14 @@ pub struct ClientBuilder {
 impl ClientBuilder {
     pub fn endpoints(mut self, endpoints: Vec<String>) -> Self {
         self.endpoints = endpoints;
+        self
+    }
+
+    pub fn add_endpoint<N>(mut self, endpoint: N) -> Self
+    where
+        N: Into<String>,
+    {
+        self.endpoints.push(endpoint.into());
         self
     }
 
@@ -59,11 +77,9 @@ impl ClientBuilder {
         let addrs = self.endpoints.join(",");
         let channel = ChannelBuilder::new(env).connect(&addrs);
 
-        let (username, password) = {
-            match self.auth {
-                Some((username, password)) => (Some(username), Some(password)),
-                _ => (None, None),
-            }
+        let (username, password) = match self.auth {
+            Some((username, password)) => (Some(username), Some(password)),
+            _ => (None, None),
         };
 
         let cluster = ClusterClient::new(channel.clone());
@@ -91,17 +107,17 @@ impl ClientBuilder {
 
 /// TODO Balancer
 pub(crate) struct Inner {
-    cluster: ClusterClient,
-    kv: KvClient,
-    auth: AuthClient,
-    lease: LeaseClient,
-    watch: WatchClient,
-    maintenance: MaintenanceClient,
+    pub cluster: ClusterClient,
+    pub kv: KvClient,
+    pub auth: AuthClient,
+    pub lease: LeaseClient,
+    pub watch: WatchClient,
+    pub maintenance: MaintenanceClient,
 
-    username: Option<String>,
-    password: Option<String>,
+    pub username: Option<String>,
+    pub password: Option<String>,
 
-    channel: Channel,
+    pub channel: Channel,
 }
 
 impl Inner {}
