@@ -5,11 +5,11 @@ use futures::Future;
 use crate::client::Inner;
 use crate::proto::rpc::MemberListRequest;
 
-pub struct Cluster {
+pub struct ClusterClient {
     inner: Arc<Inner>,
 }
 
-impl Cluster {
+impl ClusterClient {
     pub(crate) fn new(inner: Arc<Inner>) -> Self {
         Self { inner }
     }

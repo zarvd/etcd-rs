@@ -3,37 +3,39 @@ use std::sync::Arc;
 use grpcio::{Channel, ChannelBuilder, EnvBuilder};
 
 use crate::proto::rpc_grpc::{
-    AuthClient, ClusterClient, KvClient, LeaseClient, MaintenanceClient, WatchClient,
+    AuthClient as AuthClientProto, ClusterClient as ClusterClientProto, KvClient as KvClientProto,
+    LeaseClient as LeaseClientProto, MaintenanceClient as MaintenanceClientProto,
+    WatchClient as WatchClientProto,
 };
 
-use crate::{Cluster, Kv};
+use crate::{ClusterClient, KvClient};
 
 pub struct Client {
     inner: Arc<Inner>,
 }
 
 impl Client {
-    pub fn cluster(&self) -> Cluster {
-        Cluster::new(self.inner.clone())
+    pub fn cluster(&self) -> ClusterClient {
+        ClusterClient::new(self.inner.clone())
     }
 
-    pub fn kv(&self) -> Kv {
-        Kv::new(self.inner.clone())
+    pub fn kv(&self) -> KvClient {
+        KvClient::new(self.inner.clone())
     }
 
-    pub fn auth(&self) -> &AuthClient {
+    pub fn auth(&self) -> &AuthClientProto {
         &self.inner.auth
     }
 
-    pub fn lease(&self) -> &LeaseClient {
+    pub fn lease(&self) -> &LeaseClientProto {
         &self.inner.lease
     }
 
-    pub fn watch(&self) -> &WatchClient {
+    pub fn watch(&self) -> &WatchClientProto {
         &self.inner.watch
     }
 
-    pub fn maintenance(&self) -> &MaintenanceClient {
+    pub fn maintenance(&self) -> &MaintenanceClientProto {
         &self.inner.maintenance
     }
 
@@ -82,12 +84,12 @@ impl ClientBuilder {
             _ => (None, None),
         };
 
-        let cluster = ClusterClient::new(channel.clone());
-        let kv = KvClient::new(channel.clone());
-        let auth = AuthClient::new(channel.clone());
-        let lease = LeaseClient::new(channel.clone());
-        let watch = WatchClient::new(channel.clone());
-        let maintenance = MaintenanceClient::new(channel.clone());
+        let cluster = ClusterClientProto::new(channel.clone());
+        let kv = KvClientProto::new(channel.clone());
+        let auth = AuthClientProto::new(channel.clone());
+        let lease = LeaseClientProto::new(channel.clone());
+        let watch = WatchClientProto::new(channel.clone());
+        let maintenance = MaintenanceClientProto::new(channel.clone());
 
         let inner = Arc::new(Inner {
             cluster,
@@ -107,12 +109,12 @@ impl ClientBuilder {
 
 /// TODO Balancer
 pub(crate) struct Inner {
-    pub cluster: ClusterClient,
-    pub kv: KvClient,
-    pub auth: AuthClient,
-    pub lease: LeaseClient,
-    pub watch: WatchClient,
-    pub maintenance: MaintenanceClient,
+    pub cluster: ClusterClientProto,
+    pub kv: KvClientProto,
+    pub auth: AuthClientProto,
+    pub lease: LeaseClientProto,
+    pub watch: WatchClientProto,
+    pub maintenance: MaintenanceClientProto,
 
     pub username: Option<String>,
     pub password: Option<String>,

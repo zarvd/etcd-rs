@@ -3,7 +3,8 @@ use std::sync::Arc;
 use futures::Future;
 
 use crate::client::Inner;
-use crate::proto::rpc::{DeleteRangeRequest, PutRequest, RangeRequest};
+use crate::kv::{DeleteRequest, DeleteResponse, GetRequest, GetResponse, PutRequest, PutResponse};
+use crate::Error;
 
 pub struct KvClient {
     inner: Arc<Inner>,
@@ -14,61 +15,30 @@ impl KvClient {
         Self { inner }
     }
 
-    pub fn put(&self, key: &str, value: &str) -> impl Future<Item = (), Error = ()> {
-        let req = {
-            let mut req = PutRequest::new();
-            req.set_key(Vec::from(key));
-            req.set_value(Vec::from(value));
-            req
-        };
+    pub fn put(&self, req: PutRequest) -> impl Future<Item = PutResponse, Error = Error> {
         self.inner
             .kv
-            .put_async(&req)
+            .put_async(&req.into())
             .unwrap()
-            .map(|_| ())
-            .map_err(|_| ())
+            .map(From::from)
+            .map_err(|e| Error::GrpcFailure(e))
     }
 
-    pub fn delete(&self, key: &str) -> impl Future<Item = (), Error = ()> {
-        let req = {
-            let mut req = DeleteRangeRequest::new();
-            req.set_key(Vec::from(key));
-            req
-        };
-
+    pub fn delete(&self, req: DeleteRequest) -> impl Future<Item = DeleteResponse, Error = Error> {
         self.inner
             .kv
-            .delete_range_async(&req)
+            .delete_range_async(&req.into())
             .unwrap()
-            .map(|_| ())
-            .map_err(|_| ())
+            .map(From::from)
+            .map_err(|e| Error::GrpcFailure(e))
     }
 
-    pub fn get(&self, key: &str) -> impl Future<Item = Vec<(String, String)>, Error = ()> {
-        let req = {
-            let mut req = RangeRequest::new();
-            req.set_key(Vec::from(key));
-            req
-        };
+    pub fn get(&self, req: GetRequest) -> impl Future<Item = GetResponse, Error = Error> {
         self.inner
             .kv
-            .range_async(&req)
+            .range_async(&req.into())
             .unwrap()
-            .map(|mut resp| {
-                let kvs = resp.take_kvs().into_vec();
-                let mut result = Vec::with_capacity(kvs.len());
-
-                for kv in kvs {
-                    let key = std::str::from_utf8(&kv.key).unwrap();
-                    let value = std::str::from_utf8(&kv.value).unwrap();
-                    result.push((key.to_owned(), value.to_owned()));
-                }
-
-                result
-            })
-            .map_err(|e| {
-                println!("{}", e);
-                ()
-            })
+            .map(From::from)
+            .map_err(|e| Error::GrpcFailure(e))
     }
 }
