@@ -96,6 +96,7 @@ impl Into<rpc::RangeRequest> for GetRequest {
     }
 }
 
+#[derive(Debug)]
 pub struct GetResponse {
     resp: rpc::RangeResponse,
 }
