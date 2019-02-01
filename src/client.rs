@@ -8,7 +8,7 @@ use crate::proto::rpc_grpc::{
     WatchClient as WatchClientProto,
 };
 
-use crate::{ClusterClient, KvClient, LeaseClient};
+use crate::{ClusterClient, KvClient, LeaseClient, WatchClient};
 
 pub struct Client {
     inner: Arc<Inner>,
@@ -31,8 +31,8 @@ impl Client {
         LeaseClient::new(self.inner.clone())
     }
 
-    pub fn watch(&self) -> &WatchClientProto {
-        &self.inner.watch
+    pub fn watch(&self) -> WatchClient {
+        WatchClient::new(self.inner.clone())
     }
 
     pub fn maintenance(&self) -> &MaintenanceClientProto {

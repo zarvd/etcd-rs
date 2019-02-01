@@ -111,7 +111,7 @@ impl GetResponse {
             .collect()
     }
 
-    pub fn more(&self) -> bool {
+    pub fn has_more(&self) -> bool {
         self.resp.get_more()
     }
 

@@ -1,5 +1,4 @@
 extern crate futures;
-extern crate grpcio;
 extern crate tokio;
 
 use std::ops::Add;
