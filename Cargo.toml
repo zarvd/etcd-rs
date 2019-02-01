@@ -3,6 +3,7 @@ name = "etcd-rs"
 version = "0.0.1"
 authors = ["ccc13 <currantxx@gmail.com>"]
 edition = "2018"
+repository = "https://github.com/ccc13/etcd-rs"
 description = "etcd client for rust"
 license = "MIT"
 
