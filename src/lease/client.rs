@@ -4,7 +4,7 @@ use futures::{Future, Sink, Stream};
 
 use crate::client::Inner;
 use crate::lease::{
-    GrantRequest, GrantResponse, KeepAlive, KeepAliveRequest, KeepAliveResponse, RevokeRequest,
+    GrantRequest, GrantResponse, KeepAliveRequest, KeepAliveResponse, RevokeRequest,
     RevokeResponse, TtlRequest, TtlResponse,
 };
 use crate::Error;
@@ -18,6 +18,14 @@ impl LeaseClient {
         Self { inner }
     }
 
+    // TODO streaming keep alive
+    // pub fn keep_alive(
+    //     &self,
+    //     req: KeepAliveRequest,
+    // ) -> impl Stream<Item = KeepAliveResponse, Error = Error> {
+    // }
+
+    /// perf
     pub fn keep_alive_once(
         &self,
         req: KeepAliveRequest,
@@ -25,7 +33,18 @@ impl LeaseClient {
         let (sink, receiver) = self.inner.lease.lease_keep_alive().unwrap();
 
         sink.send((req.into(), Default::default()))
-            .and_then(move |_| receiver.and_then(|resp| Ok(From::from(resp))))
+            .and_then(move |mut sink| {
+                // NOTE sink must live longer than the following operations
+                // otherwise it will close the shared channel
+
+                receiver
+                    .into_future()
+                    .map(move |(resp, _)| {
+                        sink.close().unwrap(); // close explicitly
+                        From::from(resp.unwrap())
+                    })
+                    .map_err(|(e, _)| e)
+            })
             .or_else(|e| Err(Error::GrpcFailure(e)))
     }
 

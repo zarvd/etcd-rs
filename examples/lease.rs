@@ -6,9 +6,9 @@ use std::ops::Add;
 use std::time::{Duration, Instant};
 
 use etcd_rs::prelude::*;
-use etcd_rs::{Client, Error};
+use etcd_rs::Client;
 
-use futures::{Future, Sink, Stream};
+use futures::{Future, Stream};
 
 fn main() {
     let client = Client::builder().add_endpoint("127.0.0.1:2379").build();
@@ -21,34 +21,81 @@ fn main() {
             let lease_id = resp.id();
 
             let keep_alive = {
-                // keep alive
-                let r = KeepAliveRequest::new(lease_id);
-                let (req, reply) = client.lease().keep_alive();
-
-                // send keep alive request
-                let keep_alive_request = req
-                    .send_all(
-                        tokio::timer::Interval::new_interval(Duration::from_millis(10))
-                            .and_then(move |_| Ok((r.clone().into(), Default::default())))
-                            .map_err(|_| grpcio::Error::GoogleAuthenticationFailed),
-                    )
-                    .map_err(|e| println!("failed to send keep alive request: {:?}", e));
-
-                // .forward(req)
-                // .map_err(|e| println!("failed to send keep alive request: {:?}", e));
-
-                // recv keep alive reply
-                let keep_alive_reply = reply
-                    .for_each(|resp| {
-                        println!("keeping alive: {:?}", resp);
-                        Ok(())
+                let lease_client = client.lease();
+                tokio::timer::Interval::new_interval(Duration::from_secs(1))
+                    .map_err(|_| ())
+                    .and_then(move |_| {
+                        lease_client
+                            .keep_alive_once(KeepAliveRequest::new(lease_id))
+                            .then(|r| match r {
+                                Ok(resp) => {
+                                    if resp.ttl() == 0 {
+                                        println!("lease expired");
+                                        Err(())
+                                    } else {
+                                        println!("keeping alive: {:?}", resp);
+                                        Ok(())
+                                    }
+                                }
+                                Err(e) => {
+                                    println!("failed to keep alive: {:?}", e);
+                                    Err(())
+                                }
+                            })
                     })
-                    .map_err(|e| println!("keep alive failed: {:?}", e));
-
-                keep_alive_request.join(keep_alive_reply).map(|_| ())
+                    .for_each(|_| Ok(()))
             };
 
-            keep_alive
+            tokio::spawn(keep_alive);
+
+            // print key value every 1 second
+            let print_kvs = {
+                let kv_client = client.kv();
+                tokio::timer::Interval::new_interval(Duration::from_secs(1))
+                    .map_err(|_| ())
+                    .for_each(move |_| {
+                        let print_kv = kv_client
+                            .get(GetRequest::key("foo"))
+                            .map(|resp| {
+                                println!("key values: {:?}", resp);
+                            })
+                            .map_err(|_| ());
+                        tokio::spawn(print_kv);
+
+                        Ok(())
+                    })
+            };
+
+            tokio::spawn(print_kvs);
+
+            // put key value
+            let put_kv = client
+                .kv()
+                .put(PutRequest::new("foo", "bar").with_lease(lease_id))
+                .map(|_| ())
+                .map_err(|e| {
+                    println!("failed to put key value: {:?}", e);
+                    ()
+                });
+
+            tokio::spawn(put_kv);
+
+            // revoke lease after 30 seconds
+            let revoke_lease =
+                tokio::timer::Delay::new(Instant::now().add(Duration::from_secs(30)))
+                    .map_err(|_| ())
+                    .and_then(move |_| {
+                        client
+                            .lease()
+                            .revoke(RevokeRequest::new(lease_id))
+                            .map(|_| ())
+                            .map_err(|e| {
+                                println!("failed to revoke lease: {:?}", e);
+                                ()
+                            })
+                    });
+
+            revoke_lease
         });
 
     tokio::run(grant_lease);

@@ -49,43 +49,30 @@ impl From<rpc::LeaseKeepAliveResponse> for KeepAliveResponse {
     }
 }
 
-pub struct KeepAlive {
-    sender: grpcio::ClientDuplexSender<rpc::LeaseKeepAliveRequest>,
-    req: rpc::LeaseKeepAliveRequest,
-}
+// pub struct KeepAlive {
+//     sender: grpcio::ClientDuplexSender<rpc::LeaseKeepAliveRequest>,
+//     receiver: grpcio::ClientDuplexReceiver<rpc::LeaseKeepAliveResponse>,
+//     req: rpc::LeaseKeepAliveRequest,
+// }
 
-impl KeepAlive {
-    pub fn new(
-        sender: grpcio::ClientDuplexSender<rpc::LeaseKeepAliveRequest>,
-        req: KeepAliveRequest,
-    ) -> Self {
-        Self {
-            sender,
-            req: req.into(),
-        }
-    }
-}
+// impl KeepAlive {
+//     pub fn new(
+//         sender: grpcio::ClientDuplexSender<rpc::LeaseKeepAliveRequest>,
+//         receiver: grpcio::ClientDuplexReceiver<rpc::LeaseKeepAliveResponse>,
+//         req: KeepAliveRequest,
+//     ) -> Self {
+//         Self {
+//             sender,
+//             receiver,
+//             req: req.into(),
+//         }
+//     }
+// }
 
-impl Sink for KeepAlive {
-    type SinkItem = ();
-    type SinkError = Error;
+// impl Stream for KeepAlive {
+//     type Item = KeepAliveResponse;
+//     type Error = Error;
 
-    fn start_send(&mut self, _item: Self::SinkItem) -> StartSend<Self::SinkItem, Self::SinkError> {
-        match self
-            .sender
-            .start_send((self.req.clone(), Default::default()))
-        {
-            Ok(AsyncSink::Ready) => Ok(AsyncSink::Ready),
-            Ok(AsyncSink::NotReady(_)) => Ok(AsyncSink::NotReady(())),
-            Err(e) => Err(Error::GrpcFailure(e)),
-        }
-    }
-
-    fn poll_complete(&mut self) -> Poll<(), Self::SinkError> {
-        match self.sender.poll_complete() {
-            Ok(Async::Ready(())) => Ok(Async::Ready(())),
-            Ok(Async::NotReady) => Ok(Async::NotReady),
-            Err(e) => Err(Error::GrpcFailure(e)),
-        }
-    }
-}
+//     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+//     }
+// }
