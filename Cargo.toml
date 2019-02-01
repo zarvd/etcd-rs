@@ -1,6 +1,6 @@
 [package]
 name = "etcd-rs"
-version = "0.0.0"
+version = "0.0.1"
 authors = ["ccc13 <currantxx@gmail.com>"]
 edition = "2018"
 description = "etcd client for rust"
