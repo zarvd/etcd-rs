@@ -75,6 +75,7 @@ impl Into<rpc::DeleteRangeRequest> for DeleteRequest {
     }
 }
 
+#[derive(Debug)]
 pub struct DeleteResponse {
     resp: rpc::DeleteRangeResponse,
 }

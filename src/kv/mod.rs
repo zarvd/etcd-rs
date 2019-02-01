@@ -3,6 +3,7 @@ mod delete;
 mod get;
 mod key_value;
 mod put;
+mod txn;
 
 pub use crate::kv::{
     client::KvClient,
@@ -10,6 +11,7 @@ pub use crate::kv::{
     get::{GetRequest, GetResponse},
     key_value::KeyValue,
     put::{PutRequest, PutResponse},
+    txn::{TxnCmp, TxnOp, TxnRequest, TxnResponse, TxnResult},
 };
 
 use crate::proto;

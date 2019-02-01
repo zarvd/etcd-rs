@@ -3,7 +3,10 @@ use std::sync::Arc;
 use futures::Future;
 
 use crate::client::Inner;
-use crate::kv::{DeleteRequest, DeleteResponse, GetRequest, GetResponse, PutRequest, PutResponse};
+use crate::kv::{
+    DeleteRequest, DeleteResponse, GetRequest, GetResponse, PutRequest, PutResponse, TxnRequest,
+    TxnResponse,
+};
 use crate::Error;
 
 pub struct KvClient {
@@ -37,6 +40,15 @@ impl KvClient {
         self.inner
             .kv
             .range_async(&req.into())
+            .unwrap()
+            .map(From::from)
+            .map_err(|e| Error::GrpcFailure(e))
+    }
+
+    pub fn txn(&self, req: TxnRequest) -> impl Future<Item = TxnResponse, Error = Error> {
+        self.inner
+            .kv
+            .txn_async(&req.into())
             .unwrap()
             .map(From::from)
             .map_err(|e| Error::GrpcFailure(e))

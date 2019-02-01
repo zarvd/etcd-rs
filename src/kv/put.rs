@@ -64,6 +64,7 @@ impl Into<rpc::PutRequest> for PutRequest {
     }
 }
 
+#[derive(Debug)]
 pub struct PutResponse {
     resp: rpc::PutResponse,
 }
