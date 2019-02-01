@@ -1,9 +1,12 @@
 Etcd for Rust
 ====
 
+[![Crates.io][crates-badge]][crates-url]
 [![MIT licensed][mit-badge]][mit-url]
 [![Travis Build Status][travis-badge]][travis-url]
 
+[crates-badge]: https://img.shields.io/crates/v/etcd-rs.svg
+[crates-url]: https://crates.io/crates/etcd-rs
 [mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
 [mit-url]: LICENSE-MIT
 [travis-badge]: https://travis-ci.org/ccc13/etcd-rs.svg?branch=master
