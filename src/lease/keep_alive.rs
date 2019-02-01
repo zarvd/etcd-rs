@@ -1,7 +1,4 @@
-use futures::{Async, AsyncSink, Poll, Sink, StartSend};
-
 use crate::proto::rpc;
-use crate::Error;
 use crate::ResponseHeader;
 
 #[derive(Clone)]

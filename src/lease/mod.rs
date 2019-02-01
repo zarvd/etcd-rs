@@ -4,8 +4,10 @@ mod keep_alive;
 mod revoke;
 mod ttl;
 
-pub use client::LeaseClient;
-pub use grant::{GrantRequest, GrantResponse};
-pub use keep_alive::{KeepAliveRequest, KeepAliveResponse};
-pub use revoke::{RevokeRequest, RevokeResponse};
-pub use ttl::{TtlRequest, TtlResponse};
+pub use crate::lease::{
+    client::LeaseClient,
+    grant::{GrantRequest, GrantResponse},
+    keep_alive::{KeepAliveRequest, KeepAliveResponse},
+    revoke::{RevokeRequest, RevokeResponse},
+    ttl::{TtlRequest, TtlResponse},
+};

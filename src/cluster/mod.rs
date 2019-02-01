@@ -1,3 +1,3 @@
 mod client;
 
-pub use client::ClusterClient;
+pub use crate::cluster::client::ClusterClient;
