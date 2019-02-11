@@ -1,11 +1,12 @@
 mod client;
-mod cluster;
 mod error;
-mod kv;
-mod lease;
 mod proto;
 mod response_header;
-mod watch;
+
+pub mod cluster;
+pub mod kv;
+pub mod lease;
+pub mod watch;
 
 pub use crate::{
     client::Client, cluster::ClusterClient, error::Error, kv::KvClient, lease::LeaseClient,

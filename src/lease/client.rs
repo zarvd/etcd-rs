@@ -9,6 +9,7 @@ use crate::lease::{
 };
 use crate::Error;
 
+#[derive(Clone)]
 pub struct LeaseClient {
     inner: Arc<Inner>,
 }

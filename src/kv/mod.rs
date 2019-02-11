@@ -18,15 +18,15 @@ use crate::proto;
 
 #[derive(Clone, Copy, Debug)]
 pub enum EventType {
-    PUT,
-    DELETE,
+    Put,
+    Delete,
 }
 
 impl From<proto::kv::Event_EventType> for EventType {
     fn from(event_type: proto::kv::Event_EventType) -> Self {
         match event_type {
-            proto::kv::Event_EventType::PUT => EventType::PUT,
-            proto::kv::Event_EventType::DELETE => EventType::DELETE,
+            proto::kv::Event_EventType::PUT => EventType::Put,
+            proto::kv::Event_EventType::DELETE => EventType::Delete,
         }
     }
 }

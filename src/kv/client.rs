@@ -9,6 +9,7 @@ use crate::kv::{
 };
 use crate::Error;
 
+#[derive(Clone)]
 pub struct KvClient {
     inner: Arc<Inner>,
 }

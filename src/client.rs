@@ -10,6 +10,7 @@ use crate::proto::rpc_grpc::{
 
 use crate::{ClusterClient, KvClient, LeaseClient, WatchClient};
 
+#[derive(Clone)]
 pub struct Client {
     inner: Arc<Inner>,
 }
