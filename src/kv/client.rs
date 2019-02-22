@@ -25,7 +25,7 @@ impl KvClient {
             .put_async(&req.into())
             .unwrap()
             .map(From::from)
-            .map_err(|e| Error::GrpcFailure(e))
+            .map_err(Error::GrpcFailure)
     }
 
     pub fn delete(&self, req: DeleteRequest) -> impl Future<Item = DeleteResponse, Error = Error> {
@@ -34,7 +34,7 @@ impl KvClient {
             .delete_range_async(&req.into())
             .unwrap()
             .map(From::from)
-            .map_err(|e| Error::GrpcFailure(e))
+            .map_err(Error::GrpcFailure)
     }
 
     pub fn get(&self, req: GetRequest) -> impl Future<Item = GetResponse, Error = Error> {
@@ -43,7 +43,7 @@ impl KvClient {
             .range_async(&req.into())
             .unwrap()
             .map(From::from)
-            .map_err(|e| Error::GrpcFailure(e))
+            .map_err(Error::GrpcFailure)
     }
 
     pub fn txn(&self, req: TxnRequest) -> impl Future<Item = TxnResponse, Error = Error> {
@@ -52,6 +52,6 @@ impl KvClient {
             .txn_async(&req.into())
             .unwrap()
             .map(From::from)
-            .map_err(|e| Error::GrpcFailure(e))
+            .map_err(Error::GrpcFailure)
     }
 }

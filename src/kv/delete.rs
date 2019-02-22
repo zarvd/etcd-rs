@@ -42,7 +42,7 @@ impl DeleteRequest {
             for i in (0..end.len()).rev() {
                 if end[i] < 0xff {
                     end[i] += 1;
-                    end = end[0..i + 1].to_vec();
+                    end = end[0..=i].to_vec();
                     break;
                 }
             }
@@ -50,7 +50,7 @@ impl DeleteRequest {
             end
         };
         Self {
-            key: key,
+            key,
             end_key: Some(end_key),
             prev_kv: false,
         }
