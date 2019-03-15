@@ -1,16 +1,22 @@
 [package]
 name = "etcd-rs"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["ccc13 <currantxx@gmail.com>"]
 edition = "2018"
+keywords = ["etcd", "future"]
 repository = "https://github.com/ccc13/etcd-rs"
+homepage = "https://github.com/ccc13/etcd-rs"
 description = "etcd client for rust"
+documentation = "https://docs.rs/etcd-rs"
 license = "MIT"
+
+[package.metadata.docs.rs]
+all-features = true
 
 [dependencies]
 grpcio = "0.4"
-futures = "^0.1.15"
+futures = "0.1"
 protobuf =  "2.0"
 
 [dev-dependencies]
-tokio = "0.1.15"
+tokio = "0.1"
