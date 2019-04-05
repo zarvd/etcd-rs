@@ -7,10 +7,11 @@ pub mod cluster;
 pub mod kv;
 pub mod lease;
 pub mod watch;
+pub mod lock;
 
 pub use crate::{
     client::Client, cluster::ClusterClient, error::Error, kv::KvClient, lease::LeaseClient,
-    response_header::ResponseHeader, watch::WatchClient,
+    lock::LockClient, response_header::ResponseHeader, watch::WatchClient,
 };
 
 pub mod prelude {
@@ -27,4 +28,6 @@ pub mod prelude {
     pub use crate::watch::{WatchRequest, WatchResponse};
 
     pub use crate::response_header::ResponseHeader;
+
+    pub use crate::lock::{LockRequest, LockResponse, UnlockRequest, UnlockResponse};
 }

@@ -7,8 +7,9 @@ use crate::proto::rpc_grpc::{
     LeaseClient as LeaseClientProto, MaintenanceClient as MaintenanceClientProto,
     WatchClient as WatchClientProto,
 };
+use crate::proto::lock_grpc::LockClient as LockClientProto;
 
-use crate::{ClusterClient, KvClient, LeaseClient, WatchClient};
+use crate::{ClusterClient, KvClient, LeaseClient, LockClient, WatchClient};
 
 #[derive(Clone)]
 pub struct Client {
@@ -38,6 +39,10 @@ impl Client {
 
     pub fn maintenance(&self) -> &MaintenanceClientProto {
         &self.inner.maintenance
+    }
+
+    pub fn lock(&self) -> LockClient {
+        LockClient::new(self.inner.clone())
     }
 
     pub fn builder() -> ClientBuilder {
@@ -91,6 +96,7 @@ impl ClientBuilder {
         let lease = LeaseClientProto::new(channel.clone());
         let watch = WatchClientProto::new(channel.clone());
         let maintenance = MaintenanceClientProto::new(channel.clone());
+        let lock = LockClientProto::new(channel.clone());
 
         let inner = Arc::new(Inner {
             cluster,
@@ -99,6 +105,7 @@ impl ClientBuilder {
             lease,
             watch,
             maintenance,
+            lock,
             username,
             password,
             channel,
@@ -116,6 +123,7 @@ pub(crate) struct Inner {
     pub lease: LeaseClientProto,
     pub watch: WatchClientProto,
     pub maintenance: MaintenanceClientProto,
+    pub lock: LockClientProto,
 
     pub username: Option<String>,
     pub password: Option<String>,
