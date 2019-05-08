@@ -41,7 +41,7 @@ impl LeaseClient {
                 receiver
                     .into_future()
                     .map(move |(resp, _)| {
-                        sink.close().unwrap(); // close explicitly
+                        sink.close(); // close explicitly without unwrapping
                         From::from(resp.unwrap())
                     })
                     .map_err(|(e, _)| e)
