@@ -2,12 +2,12 @@ use std::sync::Arc;
 
 use grpcio::{Channel, ChannelBuilder, EnvBuilder};
 
+use crate::proto::lock_grpc::LockClient as LockClientProto;
 use crate::proto::rpc_grpc::{
     AuthClient as AuthClientProto, ClusterClient as ClusterClientProto, KvClient as KvClientProto,
     LeaseClient as LeaseClientProto, MaintenanceClient as MaintenanceClientProto,
     WatchClient as WatchClientProto,
 };
-use crate::proto::lock_grpc::LockClient as LockClientProto;
 
 use crate::{ClusterClient, KvClient, LeaseClient, LockClient, WatchClient};
 

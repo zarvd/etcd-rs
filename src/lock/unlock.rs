@@ -10,9 +10,7 @@ impl UnlockRequest {
     where
         K: Into<Vec<u8>>,
     {
-        Self {
-            key: key.into(),
-        }
+        Self { key: key.into() }
     }
 }
 

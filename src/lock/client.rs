@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use futures::Future;
 
+use super::{LockRequest, LockResponse, UnlockRequest, UnlockResponse};
 use crate::client::Inner;
 use crate::Error;
-use super::{LockRequest, LockResponse, UnlockRequest, UnlockResponse};
 
 pub struct LockClient {
     inner: Arc<Inner>,
@@ -33,4 +33,3 @@ impl LockClient {
             .map_err(Error::GrpcFailure)
     }
 }
-

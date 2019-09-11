@@ -6,8 +6,8 @@ mod response_header;
 pub mod cluster;
 pub mod kv;
 pub mod lease;
-pub mod watch;
 pub mod lock;
+pub mod watch;
 
 pub use crate::{
     client::Client, cluster::ClusterClient, error::Error, kv::KvClient, lease::LeaseClient,

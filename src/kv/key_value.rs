@@ -24,9 +24,9 @@ impl KeyValue {
         self.key_value.get_version()
     }
 
-	pub fn create_revision(&self) -> i64 {
-		self.key_value.get_create_revision()
-	}
+    pub fn create_revision(&self) -> i64 {
+        self.key_value.get_create_revision()
+    }
 
     pub fn mod_revision(&self) -> i64 {
         self.key_value.get_mod_revision()
