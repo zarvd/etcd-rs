@@ -101,11 +101,11 @@ impl ClientBuilder {
         let mut channel = ChannelBuilder::new(env);
 
         if let Some(len) = self.max_receive_msg_len {
-            channel.max_receive_message_len(len);
+            channel = channel.max_receive_message_len(len);
         }
 
         if let Some(len) = self.max_send_msg_len {
-            channel.max_send_message_len(len);
+            channel = channel.max_send_message_len(len);
         }
 
         let channel = channel.connect(&addrs);
