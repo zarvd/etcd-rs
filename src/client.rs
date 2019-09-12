@@ -49,6 +49,8 @@ impl Client {
         ClientBuilder {
             endpoints: Default::default(),
             auth: None,
+            max_receive_msg_len: None,
+            max_send_msg_len: None,
         }
     }
 }
@@ -56,6 +58,8 @@ impl Client {
 pub struct ClientBuilder {
     endpoints: Vec<String>,
     auth: Option<(String, String)>,
+    max_receive_msg_len: Option<i32>,
+    max_send_msg_len: Option<i32>,
 }
 
 impl ClientBuilder {
@@ -80,10 +84,31 @@ impl ClientBuilder {
         self
     }
 
+    pub fn max_receive_msg_len(mut self, len: i32) -> Self {
+        self.max_receive_msg_len = Some(len);
+        self
+    }
+
+    pub fn max_send_msg_len(mut self, len: i32) -> Self {
+        self.max_send_msg_len = Some(len);
+        self
+    }
+
     pub fn build(self) -> Client {
         let env = Arc::new(EnvBuilder::new().build());
         let addrs = self.endpoints.join(",");
-        let channel = ChannelBuilder::new(env).connect(&addrs);
+
+        let mut channel = ChannelBuilder::new(env);
+
+        if let Some(len) = self.max_receive_msg_len {
+            channel.max_receive_message_len(len);
+        }
+
+        if let Some(len) = self.max_send_msg_len {
+            channel.max_send_message_len(len);
+        }
+
+        let channel = channel.connect(&addrs);
 
         let (username, password) = match self.auth {
             Some((username, password)) => (Some(username), Some(password)),
