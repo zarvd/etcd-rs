@@ -10,6 +10,13 @@ rust:
   - 1.35.0
   - 1.36.0
   - 1.37.0
+
+before_script:
+  - rustup component add rustfmt-preview
+  - cargo clean
+
 script:
+  # Check formatting
+  - cargo fmt --all -- --check
   - cargo build --verbose --all
   - cargo test --verbose --all
