@@ -10,8 +10,8 @@ pub mod lock;
 pub mod watch;
 
 pub use crate::{
-    client::Client, cluster::ClusterClient, error::Error, kv::KvClient, lease::LeaseClient,
-    lock::LockClient, response_header::ResponseHeader, watch::WatchClient,
+    client::Client, client::ClientBuilder, cluster::ClusterClient, error::Error, kv::KvClient,
+    lease::LeaseClient, lock::LockClient, response_header::ResponseHeader, watch::WatchClient,
 };
 
 pub mod prelude {
