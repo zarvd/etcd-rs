@@ -1,6 +1,7 @@
 use crate::proto::rpc;
 use crate::ResponseHeader;
 
+#[derive(Debug)]
 pub struct RevokeRequest {
     id: i64,
 }
@@ -19,6 +20,7 @@ impl Into<rpc::LeaseRevokeRequest> for RevokeRequest {
     }
 }
 
+#[derive(Debug)]
 pub struct RevokeResponse {
     resp: rpc::LeaseRevokeResponse,
 }

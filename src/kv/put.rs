@@ -2,6 +2,7 @@ use crate::kv::KeyValue;
 use crate::proto::rpc;
 use crate::ResponseHeader;
 
+#[derive(Debug)]
 pub struct PutRequest {
     key: String,
     value: String,

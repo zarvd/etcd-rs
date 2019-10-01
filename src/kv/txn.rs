@@ -2,6 +2,7 @@ use crate::kv::{DeleteRequest, DeleteResponse, GetRequest, GetResponse, PutReque
 use crate::proto::rpc;
 use crate::ResponseHeader;
 
+#[derive(Debug)]
 pub enum TxnCmp {
     Equal,
     NotEqual,
@@ -20,6 +21,7 @@ impl Into<rpc::Compare_CompareResult> for TxnCmp {
     }
 }
 
+#[derive(Debug)]
 pub enum TxnOp {
     Get(GetRequest),
     Put(PutRequest),
@@ -66,6 +68,7 @@ impl Into<rpc::RequestOp> for TxnOp {
     }
 }
 
+#[derive(Debug)]
 pub struct TxnRequest {
     compare: Vec<rpc::Compare>,
     success: Vec<rpc::RequestOp>,

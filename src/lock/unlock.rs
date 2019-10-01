@@ -1,6 +1,7 @@
 use crate::proto::lock as rpc;
 use crate::ResponseHeader;
 
+#[derive(Debug)]
 pub struct UnlockRequest {
     key: Vec<u8>,
 }
@@ -22,6 +23,7 @@ impl From<UnlockRequest> for rpc::UnlockRequest {
     }
 }
 
+#[derive(Debug)]
 pub struct UnlockResponse {
     resp: rpc::UnlockResponse,
 }

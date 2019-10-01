@@ -5,6 +5,7 @@ use crate::proto::rpc;
 use crate::Error;
 use crate::ResponseHeader;
 
+#[derive(Debug)]
 pub struct WatchRequest {
     key: String,
     end_key: Option<Vec<u8>>,

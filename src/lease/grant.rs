@@ -1,6 +1,7 @@
 use crate::proto::rpc;
 use crate::ResponseHeader;
 
+#[derive(Debug)]
 pub struct GrantRequest {
     ttl: i64,
 }
@@ -19,6 +20,7 @@ impl Into<rpc::LeaseGrantRequest> for GrantRequest {
     }
 }
 
+#[derive(Debug)]
 pub struct GrantResponse {
     resp: rpc::LeaseGrantResponse,
 }

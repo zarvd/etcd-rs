@@ -1,6 +1,7 @@
 use crate::proto::lock as rpc;
 use crate::ResponseHeader;
 
+#[derive(Debug)]
 pub struct LockRequest {
     name: String,
     lease: i64,
@@ -27,6 +28,7 @@ impl From<LockRequest> for rpc::LockRequest {
     }
 }
 
+#[derive(Debug)]
 pub struct LockResponse {
     resp: rpc::LockResponse,
 }

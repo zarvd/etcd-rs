@@ -1,6 +1,7 @@
 use crate::proto::rpc;
 use crate::ResponseHeader;
 
+#[derive(Debug)]
 pub struct TtlRequest {
     id: i64,
     with_keys: bool,
@@ -29,6 +30,7 @@ impl Into<rpc::LeaseTimeToLiveRequest> for TtlRequest {
     }
 }
 
+#[derive(Debug)]
 pub struct TtlResponse {
     resp: rpc::LeaseTimeToLiveResponse,
 }
