@@ -6,6 +6,7 @@ use crate::client::Inner;
 use crate::watch::{Watch, WatchRequest, WatchResponse};
 use crate::Error;
 
+#[derive(Clone)]
 pub struct WatchClient {
     inner: Arc<Inner>,
 }
