@@ -5,6 +5,8 @@ use crate::ResponseHeader;
 pub struct GetRequest {
     key: Vec<u8>,
     end_key: Option<Vec<u8>>,
+    limit: i64,
+    revision: i64,
     serializable: bool,
     keys_only: bool,
     count_only: bool,
@@ -13,11 +15,13 @@ pub struct GetRequest {
 impl GetRequest {
     pub fn key<N>(key: N) -> Self
     where
-        N: Into<Vec<u8>>,
+        N: Into<String>,
     {
         Self {
             key: key.into(),
             end_key: None,
+            limit: 0,
+            revision: 0,
             serializable: false,
             keys_only: false,
             count_only: false,
@@ -42,12 +46,13 @@ impl GetRequest {
 			    last += 1;
 		    }
 
-		    end
-	    };
-
+            end
+        };
         Self {
             key,
             end_key: Some(end_key),
+            limit: 0,
+            revision: 0,
             serializable: false,
             keys_only: false,
             count_only: false,
@@ -61,10 +66,22 @@ impl GetRequest {
         Self {
             key: key.into(),
             end_key: Some(end_key.into()),
+            limit: 0,
+            revision: 0,
             serializable: false,
             keys_only: false,
             count_only: false,
         }
+    }
+
+    pub fn with_limit(mut self, limit: i64) -> Self {
+        self.limit = limit;
+        self
+    }
+
+    pub fn with_revision(mut self, revision: i64) -> Self {
+        self.revision = revision;
+        self
     }
 
     pub fn with_serializable(mut self) -> Self {
@@ -91,6 +108,9 @@ impl Into<rpc::RangeRequest> for GetRequest {
         if let Some(range_end) = self.end_key {
             req.set_range_end(range_end);
         }
+
+        req.set_limit(self.limit);
+        req.set_revision(self.revision);
         req.set_keys_only(self.keys_only);
         req.set_count_only(self.count_only);
         req.set_serializable(self.serializable);

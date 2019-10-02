@@ -17,7 +17,7 @@ all-features = true
 [dependencies]
 grpcio = "0.4"
 futures = "0.1"
-protobuf =  "2.0"
+protobuf = { version = "2", features = ["with-bytes"] }
 
 [dev-dependencies]
 tokio = "0.1"
