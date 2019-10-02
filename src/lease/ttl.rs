@@ -35,8 +35,7 @@ pub struct TtlResponse {
 
 impl TtlResponse {
     pub fn header(&self) -> ResponseHeader {
-        // FIXME perf
-        From::from(self.resp.get_header().clone())
+	    self.resp.get_header().into()
     }
 
     pub fn id(&self) -> i64 {

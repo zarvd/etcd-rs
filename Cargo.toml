@@ -9,6 +9,7 @@ homepage = "https://github.com/ccc13/etcd-rs"
 description = "etcd client for rust"
 documentation = "https://docs.rs/etcd-rs"
 license = "MIT"
+build = "build.rs"
 
 [package.metadata.docs.rs]
 all-features = true
@@ -20,3 +21,6 @@ protobuf =  "2.0"
 
 [dev-dependencies]
 tokio = "0.1"
+
+[build-dependencies]
+protoc-grpcio = "1.1"

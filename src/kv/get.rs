@@ -3,7 +3,7 @@ use crate::proto::rpc;
 use crate::ResponseHeader;
 
 pub struct GetRequest {
-    key: String,
+    key: Vec<u8>,
     end_key: Option<Vec<u8>>,
     serializable: bool,
     keys_only: bool,
@@ -13,7 +13,7 @@ pub struct GetRequest {
 impl GetRequest {
     pub fn key<N>(key: N) -> Self
     where
-        N: Into<String>,
+        N: Into<Vec<u8>>,
     {
         Self {
             key: key.into(),
@@ -26,24 +26,27 @@ impl GetRequest {
 
     pub fn prefix<N>(prefix: N) -> Self
     where
-        N: Into<String>,
+        N: Into<Vec<u8>>,
     {
         let key = prefix.into();
-        let end_key = {
-            let mut end = key.clone().into_bytes();
+	    let end_key = {
+		    let mut end = key.clone();
+		    let last = end
+			    .last_mut()
+			    .copied()
+			    .unwrap_or(0);
 
-            for i in (0..end.len()).rev() {
-                if end[i] < 0xff {
-                    end[i] += 1;
-                    end = end[0..=i].to_vec();
-                    break;
-                }
-            }
+		    if last == std::u8::MAX {
+			    end.push(1);
+		    } else {
+			    last += 1;
+		    }
 
-            end
-        };
+		    end
+	    };
+
         Self {
-            key: key,
+            key,
             end_key: Some(end_key),
             serializable: false,
             keys_only: false,
@@ -53,11 +56,11 @@ impl GetRequest {
 
     pub fn range<N>(key: N, end_key: N) -> Self
     where
-        N: Into<String>,
+        N: Into<Vec<u8>>,
     {
         Self {
             key: key.into(),
-            end_key: Some(end_key.into().into_bytes()),
+            end_key: Some(end_key.into()),
             serializable: false,
             keys_only: false,
             count_only: false,
@@ -84,7 +87,7 @@ impl Into<rpc::RangeRequest> for GetRequest {
     fn into(self) -> rpc::RangeRequest {
         let mut req = rpc::RangeRequest::new();
 
-        req.set_key(self.key.into_bytes());
+        req.set_key(self.key);
         if let Some(range_end) = self.end_key {
             req.set_range_end(range_end);
         }
@@ -98,35 +101,42 @@ impl Into<rpc::RangeRequest> for GetRequest {
 
 #[derive(Debug)]
 pub struct GetResponse {
-    resp: rpc::RangeResponse,
+	header: ResponseHeader,
+    more: bool,
+    count: i64,
+	kvs: Vec<KeyValue>,
 }
 
 impl GetResponse {
-    pub fn kvs(&self) -> Vec<KeyValue> {
-        // FIXME perf
-        self.resp
-            .get_kvs()
-            .iter()
-            .map(|kv| From::from(kv.clone()))
-            .collect()
-    }
+	pub fn header(&self) -> &ResponseHeader {
+		&self.header
+	}
 
     pub fn has_more(&self) -> bool {
-        self.resp.get_more()
+	    self.more
     }
 
     pub fn count(&self) -> i64 {
-        self.resp.get_count()
+	    self.count
     }
 
-    pub fn header(&self) -> ResponseHeader {
-        // FIXME perf
-        From::from(self.resp.get_header().clone())
-    }
+	pub fn kvs(&self) -> &[KeyValue] {
+		&self.kvs
+	}
 }
 
 impl From<rpc::RangeResponse> for GetResponse {
-    fn from(resp: rpc::RangeResponse) -> Self {
-        Self { resp }
+    fn from(mut resp: rpc::RangeResponse) -> Self {
+	    GetResponse {
+		    header: resp.take_header().into(),
+		    more: resp.more,
+		    count: resp.count,
+		    kvs: resp
+			    .kvs
+			    .into_vec()
+			    .into_iter()
+			    .map(|kv| kv.into())
+			    .collect(),
+	    }
     }
 }

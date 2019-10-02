@@ -83,13 +83,13 @@ impl TxnRequest {
 
     pub fn when_value<N>(mut self, target: N, cmp: TxnCmp, value: N) -> Self
     where
-        N: Into<String>,
+        N: Into<Vec<u8>>,
     {
         let mut compare = rpc::Compare::new();
         compare.set_target(rpc::Compare_CompareTarget::VALUE);
-        compare.set_key(target.into().into_bytes());
+        compare.set_key(target.into());
         compare.set_result(cmp.into());
-        compare.set_value(value.into().into_bytes());
+        compare.set_value(value.into());
 
         self.compare.push(compare);
         self
@@ -97,11 +97,11 @@ impl TxnRequest {
 
     pub fn when_version<N>(mut self, target: N, cmp: TxnCmp, value: i64) -> Self
     where
-        N: Into<String>,
+        N: Into<Vec<u8>>,
     {
         let mut compare = rpc::Compare::new();
         compare.set_target(rpc::Compare_CompareTarget::VERSION);
-        compare.set_key(target.into().into_bytes());
+        compare.set_key(target.into());
         compare.set_result(cmp.into());
         compare.set_version(value);
 
@@ -111,11 +111,11 @@ impl TxnRequest {
 
     pub fn when_create_revision<N>(mut self, target: N, cmp: TxnCmp, value: i64) -> Self
     where
-        N: Into<String>,
+        N: Into<Vec<u8>>,
     {
         let mut compare = rpc::Compare::new();
         compare.set_target(rpc::Compare_CompareTarget::CREATE);
-        compare.set_key(target.into().into_bytes());
+        compare.set_key(target.into());
         compare.set_result(cmp.into());
         compare.set_create_revision(value);
 
@@ -125,11 +125,11 @@ impl TxnRequest {
 
     pub fn when_mod_revision<N>(mut self, target: N, cmp: TxnCmp, value: i64) -> Self
     where
-        N: Into<String>,
+        N: Into<Vec<u8>>,
     {
         let mut compare = rpc::Compare::new();
-        compare.set_target(rpc::Compare_CompareTarget::CREATE);
-        compare.set_key(target.into().into_bytes());
+        compare.set_target(rpc::Compare_CompareTarget::MOD);
+        compare.set_key(target.into());
         compare.set_result(cmp.into());
         compare.set_mod_revision(value);
 
@@ -137,14 +137,19 @@ impl TxnRequest {
         self
     }
 
-    // TODO
-    // pub fn when_lease(target: String, cmp: TxnCmp, value: i64) -> Self {
-    //     Self {
-    //         target: TxnTarget::Lease(target),
-    //         value: TxnTargetValue::Lease(value),
-    //         compare,
-    //     }
-    // }
+	pub fn when_lease<N>(mut self, target: N, cmp: TxnCmp, value: i64) -> Self
+	where
+		N: Into<Vec<u8>>,
+	{
+		let mut compare = rpc::Compare::new();
+		compare.set_target(rpc::Compare_CompareTarget::LEASE);
+		compare.set_key(target.into());
+		compare.set_result(cmp.into());
+		compare.set_lease(value);
+
+		self.compare.push(compare);
+		self
+	}
 
     pub fn and_then<O>(mut self, op: O) -> Self
     where
@@ -185,45 +190,53 @@ pub enum TxnResult {
 
 #[derive(Debug)]
 pub struct TxnResponse {
-    resp: rpc::TxnResponse,
+	header: ResponseHeader,
+    succeeded: bool,
+    results: Vec<TxnResult>,
 }
 
 impl TxnResponse {
-    pub fn header(&self) -> ResponseHeader {
-        // FIXME perf
-        From::from(self.resp.get_header().clone())
+    pub fn header(&self) -> &ResponseHeader {
+	    &self.header
     }
 
     pub fn is_succeeded(&self) -> bool {
-        self.resp.get_succeeded()
+	    self.succeeded
     }
 
-    pub fn results(&self) -> Vec<TxnResult> {
-        //FIXME perf
-        self.resp
-            .get_responses()
-            .iter()
-            .map(|resp| match &resp.response {
-                Some(rpc::ResponseOp_oneof_response::response_range(resp)) => {
-                    TxnResult::Get(From::from(resp.clone()))
-                }
-                Some(rpc::ResponseOp_oneof_response::response_put(resp)) => {
-                    TxnResult::Put(From::from(resp.clone()))
-                }
-                Some(rpc::ResponseOp_oneof_response::response_delete_range(resp)) => {
-                    TxnResult::Delete(From::from(resp.clone()))
-                }
-                Some(rpc::ResponseOp_oneof_response::response_txn(resp)) => {
-                    TxnResult::Txn(From::from(resp.clone()))
-                }
-                None => panic!("failed to fetch transaction response"),
-            })
-            .collect()
+    pub fn results(&self) -> &[TxnResult] {
+	    &self.results
     }
 }
 
 impl From<rpc::TxnResponse> for TxnResponse {
-    fn from(resp: rpc::TxnResponse) -> Self {
-        Self { resp }
+    fn from(mut resp: rpc::TxnResponse) -> Self {
+	    let results = resp
+		    .responses
+		    .into_vec()
+		    .into_iter()
+		    .map(|resp| match resp.response {
+			    Some(rpc::ResponseOp_oneof_response::response_range(resp)) => {
+				    TxnResult::Get(resp.into())
+			    }
+			    Some(rpc::ResponseOp_oneof_response::response_put(resp)) => {
+				    TxnResult::Put(resp.into())
+			    }
+			    Some(rpc::ResponseOp_oneof_response::response_delete_range(resp)) => {
+				    TxnResult::Delete(resp.into())
+			    }
+			    Some(rpc::ResponseOp_oneof_response::response_txn(resp)) => {
+				    TxnResult::Txn(resp.into())
+			    }
+			    // FIXME: panic
+			    None => panic!("failed to fetch transaction response"),
+		    })
+		    .collect();
+
+	    TxnResponse {
+		    header: resp.take_header().into(),
+		    succeeded: resp.succeeded,
+		    results,
+	    }
     }
 }

@@ -66,23 +66,31 @@ impl Into<rpc::PutRequest> for PutRequest {
 
 #[derive(Debug)]
 pub struct PutResponse {
-    resp: rpc::PutResponse,
+	header: ResponseHeader,
+	prev_kv: Option<KeyValue>,
 }
 
 impl PutResponse {
-    pub fn prev_kv(&self) -> KeyValue {
-        // FIXME perf
-        From::from(self.resp.get_prev_kv().clone())
+    pub fn header(&self) -> &ResponseHeader {
+	    &self.header
     }
 
-    pub fn header(&self) -> ResponseHeader {
-        // FIXME perf
-        From::from(self.resp.get_header().clone())
-    }
+	pub fn prev_kv(&self) -> Option<&KeyValue> {
+		self.prev_kv.as_ref()
+	}
 }
 
 impl From<rpc::PutResponse> for PutResponse {
-    fn from(resp: rpc::PutResponse) -> Self {
-        Self { resp }
+    fn from(mut resp: rpc::PutResponse) -> Self {
+	    let prev_kv = if resp.has_prev_kv() {
+		    Some(resp.take_prev_kv().into())
+	    } else {
+		    None
+	    };
+
+	    PutResponse {
+		    header: resp.take_header().into(),
+		    prev_kv,
+	    }
     }
 }

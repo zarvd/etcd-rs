@@ -28,8 +28,7 @@ pub struct UnlockResponse {
 
 impl UnlockResponse {
     pub fn header(&self) -> ResponseHeader {
-        // FIXME perf
-        self.resp.get_header().clone().into()
+        self.resp.get_header().into()
     }
 }
 

@@ -3,7 +3,7 @@ use crate::proto::rpc;
 use crate::ResponseHeader;
 
 pub struct DeleteRequest {
-    key: String,
+    key: Vec<u8>,
     end_key: Option<Vec<u8>>,
     prev_kv: bool,
 }
@@ -11,7 +11,7 @@ pub struct DeleteRequest {
 impl DeleteRequest {
     pub fn key<N>(key: N) -> Self
     where
-        N: Into<String>,
+        N: Into<Vec<u8>>,
     {
         Self {
             key: key.into(),
@@ -22,33 +22,36 @@ impl DeleteRequest {
 
     pub fn range<N>(key: N, end_key: N) -> Self
     where
-        N: Into<String>,
+        N: Into<Vec<u8>>,
     {
         Self {
             key: key.into(),
-            end_key: Some(end_key.into().into_bytes()),
+            end_key: Some(end_key.into()),
             prev_kv: false,
         }
     }
 
     pub fn prefix<N>(prefix: N) -> Self
     where
-        N: Into<String>,
+        N: Into<Vec<u8>>,
     {
         let key = prefix.into();
-        let end_key = {
-            let mut end = key.clone().into_bytes();
+	    let end_key = {
+		    let mut end = key.clone();
+		    let last = end
+			    .last_mut()
+			    .copied()
+			    .unwrap_or(0);
 
-            for i in (0..end.len()).rev() {
-                if end[i] < 0xff {
-                    end[i] += 1;
-                    end = end[0..=i].to_vec();
-                    break;
-                }
-            }
+		    if last == std::u8::MAX {
+			    end.push(1);
+		    } else {
+			    last += 1;
+		    }
 
-            end
-        };
+		    end
+	    };
+
         Self {
             key,
             end_key: Some(end_key),
@@ -66,42 +69,48 @@ impl Into<rpc::DeleteRangeRequest> for DeleteRequest {
     fn into(self) -> rpc::DeleteRangeRequest {
         let mut req = rpc::DeleteRangeRequest::new();
 
-        req.set_key(Vec::from(self.key.as_bytes()));
+        req.set_key(Vec::from(self.key));
         req.set_prev_kv(self.prev_kv);
         if let Some(range_end) = self.end_key {
             req.set_range_end(range_end);
         }
+
         req
     }
 }
 
 #[derive(Debug)]
 pub struct DeleteResponse {
-    resp: rpc::DeleteRangeResponse,
+	header: ResponseHeader,
+    deleted: i64,
+	prev_kvs: Vec<KeyValue>,
 }
 
 impl DeleteResponse {
-    pub fn prev_kvs(&self) -> Vec<KeyValue> {
-        // FIXME perf
-        self.resp
-            .get_prev_kvs()
-            .iter()
-            .map(|kv| From::from(kv.clone()))
-            .collect()
-    }
+	pub fn header(&self) -> &ResponseHeader {
+		&self.header
+	}
 
-    pub fn deleted(&self) -> i64 {
-        self.resp.get_deleted()
-    }
+	pub fn deleted(&self) -> i64 {
+		self.deleted
+	}
 
-    pub fn header(&self) -> ResponseHeader {
-        // FIXME perf
-        From::from(self.resp.get_header().clone())
+	pub fn prev_kvs(&self) -> &[KeyValue] {
+	    &self.prev_kvs
     }
 }
 
 impl From<rpc::DeleteRangeResponse> for DeleteResponse {
-    fn from(resp: rpc::DeleteRangeResponse) -> Self {
-        Self { resp }
+    fn from(mut resp: rpc::DeleteRangeResponse) -> Self {
+	    DeleteResponse {
+		    header: resp.take_header().into(),
+		    deleted: resp.deleted,
+		    prev_kvs: resp
+			    .prev_kvs
+			    .into_vec()
+			    .into_iter()
+			    .map(|kv| kv.into())
+			    .collect(),
+	    }
     }
 }

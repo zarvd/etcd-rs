@@ -2,3 +2,6 @@
 **/*.rs.bk
 Cargo.lock
 .idea/
+
+src/proto/*.rs
+!src/proto/mod.rs

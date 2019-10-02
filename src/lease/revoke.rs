@@ -25,8 +25,7 @@ pub struct RevokeResponse {
 
 impl RevokeResponse {
     pub fn header(&self) -> ResponseHeader {
-        // FIXME perf
-        From::from(self.resp.get_header().clone())
+	    self.resp.get_header().into()
     }
 }
 

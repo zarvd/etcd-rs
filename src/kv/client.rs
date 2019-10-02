@@ -16,7 +16,7 @@ pub struct KvClient {
 
 impl KvClient {
     pub(crate) fn new(inner: Arc<Inner>) -> Self {
-        Self { inner }
+        KvClient { inner }
     }
 
     pub fn put(&self, req: PutRequest) -> impl Future<Item = PutResponse, Error = Error> {

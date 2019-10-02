@@ -1,5 +1,4 @@
-//
-// Copyright 2017 The jetcd authors
+// Copyright (c) 2015, Google Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,38 +11,21 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 syntax = "proto3";
 
-package authpb;
+package google.api;
 
+import "http.proto";
+import "descriptor.proto";
+
+option go_package = "google.golang.org/genproto/googleapis/api/annotations;annotations";
 option java_multiple_files = true;
-option java_package = "io.etcd.jetcd.api";
+option java_outer_classname = "AnnotationsProto";
+option java_package = "com.google.api";
+option objc_class_prefix = "GAPI";
 
-// User is a single entry in the bucket authUsers
-message User {
-  bytes name = 1;
-  bytes password = 2;
-  repeated string roles = 3;
-}
-
-// Permission is a single entity
-message Permission {
-  enum Type {
-    READ = 0;
-    WRITE = 1;
-    READWRITE = 2;
-  }
-  Type permType = 1;
-
-  bytes key = 2;
-  bytes range_end = 3;
-}
-
-// Role is a single entry in the bucket authRoles
-message Role {
-  bytes name = 1;
-
-  repeated Permission keyPermission = 2;
+extend google.protobuf.MethodOptions {
+  // See `HttpRule`.
+  HttpRule http = 72295728;
 }

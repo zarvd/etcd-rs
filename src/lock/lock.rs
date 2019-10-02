@@ -33,8 +33,7 @@ pub struct LockResponse {
 
 impl LockResponse {
     pub fn header(&self) -> ResponseHeader {
-        // FIXME perf
-        self.resp.get_header().clone().into()
+        self.resp.get_header().into()
     }
 
     pub fn key(&self) -> &[u8] {
