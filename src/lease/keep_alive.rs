@@ -8,7 +8,7 @@ pub struct KeepAliveRequest {
 
 impl KeepAliveRequest {
     pub fn new(id: i64) -> Self {
-        Self { id }
+        KeepAliveRequest { id }
     }
 }
 
@@ -22,26 +22,32 @@ impl Into<rpc::LeaseKeepAliveRequest> for KeepAliveRequest {
 
 #[derive(Debug)]
 pub struct KeepAliveResponse {
-    resp: rpc::LeaseKeepAliveResponse,
+    header: ResponseHeader,
+    id: i64,
+    ttl: i64,
 }
 
 impl KeepAliveResponse {
-    pub fn header(&self) -> ResponseHeader {
-	    self.resp.get_header().into()
+    pub fn header(&self) -> &ResponseHeader {
+        &self.header
     }
 
     pub fn id(&self) -> i64 {
-        self.resp.get_ID()
+        self.id
     }
 
     pub fn ttl(&self) -> i64 {
-        self.resp.get_TTL()
+        self.ttl
     }
 }
 
 impl From<rpc::LeaseKeepAliveResponse> for KeepAliveResponse {
-    fn from(resp: rpc::LeaseKeepAliveResponse) -> Self {
-        Self { resp }
+    fn from(mut resp: rpc::LeaseKeepAliveResponse) -> Self {
+        KeepAliveResponse {
+            header: resp.take_header().into(),
+            id: resp.ID,
+            ttl: resp.TTL,
+        }
     }
 }
 

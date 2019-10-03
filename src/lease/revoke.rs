@@ -7,7 +7,7 @@ pub struct RevokeRequest {
 
 impl RevokeRequest {
     pub fn new(id: i64) -> Self {
-        Self { id }
+        RevokeRequest { id }
     }
 }
 
@@ -20,17 +20,19 @@ impl Into<rpc::LeaseRevokeRequest> for RevokeRequest {
 }
 
 pub struct RevokeResponse {
-    resp: rpc::LeaseRevokeResponse,
+    header: ResponseHeader,
 }
 
 impl RevokeResponse {
-    pub fn header(&self) -> ResponseHeader {
-	    self.resp.get_header().into()
+    pub fn header(&self) -> &ResponseHeader {
+        &self.header
     }
 }
 
 impl From<rpc::LeaseRevokeResponse> for RevokeResponse {
-    fn from(resp: rpc::LeaseRevokeResponse) -> Self {
-        Self { resp }
+    fn from(mut resp: rpc::LeaseRevokeResponse) -> Self {
+        RevokeResponse {
+            header: resp.take_header().into(),
+        }
     }
 }
