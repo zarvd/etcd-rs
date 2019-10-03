@@ -6,6 +6,11 @@ rust:
   - 1.36.0
   - 1.37.0
 
+install:
+  - wget https://github.com/protocolbuffers/protobuf/releases/download/v3.6.1/protobuf-cpp-3.6.1.tar.gz
+  - tar -xzvf protobuf-cpp-3.6.1.tar.gz
+  - pushd protobuf-3.6.1 && ./configure --prefix=/usr && make && sudo make install && popd
+
 before_script:
   - rustup component add rustfmt-preview
   - cargo clean
