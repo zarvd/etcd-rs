@@ -243,10 +243,10 @@ impl Stream for Watch {
                 .sender
                 .start_send((self.create_req.clone(), Default::default()))?
             {
-                AsyncSink::NotReady(_) => return Ok(Async::NotReady),
                 AsyncSink::Ready => {
                     self.sent = true;
                 }
+                AsyncSink::NotReady(_) => return Ok(Async::NotReady),
             }
         }
 

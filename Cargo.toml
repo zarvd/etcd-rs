@@ -18,6 +18,7 @@ all-features = true
 grpcio = "0.4"
 futures = "0.1"
 protobuf = { version = "2", features = ["with-bytes"] }
+tokio-timer = "0.2"
 
 [dev-dependencies]
 tokio = "0.1"

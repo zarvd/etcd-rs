@@ -1,4 +1,7 @@
-use futures::{Async, AsyncSink, Poll, Sink, Stream};
+use std::time::{Duration, Instant};
+
+use futures::{Async, AsyncSink, Future, Poll, Sink, Stream};
+use tokio_timer::Delay;
 
 use crate::proto::rpc;
 use crate::Error;
@@ -58,6 +61,8 @@ pub(crate) struct KeepAlive {
     sender: grpcio::ClientDuplexSender<rpc::LeaseKeepAliveRequest>,
     receiver: grpcio::ClientDuplexReceiver<rpc::LeaseKeepAliveResponse>,
     req: rpc::LeaseKeepAliveRequest,
+    interval: Duration,
+    delay: Option<Delay>,
     sent: bool,
 }
 
@@ -66,11 +71,14 @@ impl KeepAlive {
         sender: grpcio::ClientDuplexSender<rpc::LeaseKeepAliveRequest>,
         receiver: grpcio::ClientDuplexReceiver<rpc::LeaseKeepAliveResponse>,
         req: KeepAliveRequest,
+        interval: Duration,
     ) -> Self {
         KeepAlive {
             sender,
             receiver,
             req: req.into(),
+            interval,
+            delay: None,
             sent: false,
         }
     }
@@ -82,14 +90,27 @@ impl Stream for KeepAlive {
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         if !self.sent {
+            if self.delay.is_none() {
+                self.delay = Some(Delay::new(Instant::now() + self.interval));
+            }
+
+            if let Some(delay) = &mut self.delay {
+                match delay.poll().map_err(|_| Error::Unknown)? {
+                    Async::Ready(()) => {
+                        self.delay.take();
+                    }
+                    Async::NotReady => return Ok(Async::NotReady),
+                }
+            }
+
             match self
                 .sender
                 .start_send((self.req.clone(), Default::default()))?
             {
-                AsyncSink::NotReady(_) => return Ok(Async::NotReady),
                 AsyncSink::Ready => {
                     self.sent = true;
                 }
+                AsyncSink::NotReady(_) => return Ok(Async::NotReady),
             }
         }
 

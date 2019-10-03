@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use futures::{Future, Stream};
 
@@ -23,9 +24,17 @@ impl LeaseClient {
         &self,
         req: KeepAliveRequest,
     ) -> impl Stream<Item = KeepAliveResponse, Error = Error> {
+        self.keep_alive_at_interval(req, Duration::from_secs(1))
+    }
+
+    pub fn keep_alive_at_interval(
+        &self,
+        req: KeepAliveRequest,
+        interval: Duration,
+    ) -> impl Stream<Item = KeepAliveResponse, Error = Error> {
         let (sink, receiver) = self.inner.lease.lease_keep_alive().unwrap();
 
-        KeepAlive::new(sink, receiver, req)
+        KeepAlive::new(sink, receiver, req, interval)
     }
 
     pub fn grant(&self, req: GrantRequest) -> impl Future<Item = GrantResponse, Error = Error> {
