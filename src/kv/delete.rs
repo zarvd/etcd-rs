@@ -13,7 +13,7 @@ impl DeleteRequest {
     where
         N: Into<Vec<u8>>,
     {
-        Self {
+        DeleteRequest {
             key: key.into(),
             end_key: None,
             prev_kv: false,
@@ -24,7 +24,7 @@ impl DeleteRequest {
     where
         N: Into<Vec<u8>>,
     {
-        Self {
+        DeleteRequest {
             key: key.into(),
             end_key: Some(end_key.into()),
             prev_kv: false,
@@ -36,23 +36,20 @@ impl DeleteRequest {
         N: Into<Vec<u8>>,
     {
         let key = prefix.into();
-	    let end_key = {
-		    let mut end = key.clone();
-		    let last = end
-			    .last_mut()
-			    .copied()
-			    .unwrap_or(0);
+        let end_key = {
+            let mut end = key.clone();
+            let last = end.last_mut().copied().unwrap_or(0);
 
-		    if last == std::u8::MAX {
-			    end.push(1);
-		    } else {
-			    last += 1;
-		    }
+            if last == std::u8::MAX {
+                end.push(1);
+            } else {
+                last += 1;
+            }
 
-		    end
-	    };
+            end
+        };
 
-        Self {
+        DeleteRequest {
             key,
             end_key: Some(end_key),
             prev_kv: false,
@@ -81,36 +78,36 @@ impl Into<rpc::DeleteRangeRequest> for DeleteRequest {
 
 #[derive(Debug)]
 pub struct DeleteResponse {
-	header: ResponseHeader,
+    header: ResponseHeader,
     deleted: i64,
-	prev_kvs: Vec<KeyValue>,
+    prev_kvs: Vec<KeyValue>,
 }
 
 impl DeleteResponse {
-	pub fn header(&self) -> &ResponseHeader {
-		&self.header
-	}
+    pub fn header(&self) -> &ResponseHeader {
+        &self.header
+    }
 
-	pub fn deleted(&self) -> i64 {
-		self.deleted
-	}
+    pub fn deleted(&self) -> i64 {
+        self.deleted
+    }
 
-	pub fn prev_kvs(&self) -> &[KeyValue] {
-	    &self.prev_kvs
+    pub fn prev_kvs(&self) -> &[KeyValue] {
+        &self.prev_kvs
     }
 }
 
 impl From<rpc::DeleteRangeResponse> for DeleteResponse {
     fn from(mut resp: rpc::DeleteRangeResponse) -> Self {
-	    DeleteResponse {
-		    header: resp.take_header().into(),
-		    deleted: resp.deleted,
-		    prev_kvs: resp
-			    .prev_kvs
-			    .into_vec()
-			    .into_iter()
-			    .map(|kv| kv.into())
-			    .collect(),
-	    }
+        DeleteResponse {
+            header: resp.take_header().into(),
+            deleted: resp.deleted,
+            prev_kvs: resp
+                .prev_kvs
+                .into_vec()
+                .into_iter()
+                .map(|kv| kv.into())
+                .collect(),
+        }
     }
 }

@@ -3,8 +3,8 @@ use crate::proto::rpc;
 use crate::ResponseHeader;
 
 pub struct PutRequest {
-    key: String,
-    value: String,
+    key: Vec<u8>,
+    value: Vec<u8>,
     lease: Option<i64>,
     prev_kv: bool,
     ignore_value: bool,
@@ -14,15 +14,15 @@ pub struct PutRequest {
 impl PutRequest {
     pub fn new<N>(key: N, value: N) -> Self
     where
-        N: Into<String>,
+        N: Into<Vec<u8>>,
     {
-        Self {
+        PutRequest {
             key: key.into(),
             value: value.into(),
             lease: None,
             prev_kv: false,
-            ignore_lease: false,
             ignore_value: false,
+            ignore_lease: false,
         }
     }
 
@@ -51,8 +51,8 @@ impl Into<rpc::PutRequest> for PutRequest {
     fn into(self) -> rpc::PutRequest {
         let mut req = rpc::PutRequest::new();
 
-        req.set_key(self.key.into_bytes());
-        req.set_value(self.value.into_bytes());
+        req.set_key(self.key);
+        req.set_value(self.value);
         req.set_ignore_lease(self.ignore_lease);
         req.set_ignore_value(self.ignore_value);
         req.set_prev_kv(self.prev_kv);
@@ -66,31 +66,31 @@ impl Into<rpc::PutRequest> for PutRequest {
 
 #[derive(Debug)]
 pub struct PutResponse {
-	header: ResponseHeader,
-	prev_kv: Option<KeyValue>,
+    header: ResponseHeader,
+    prev_kv: Option<KeyValue>,
 }
 
 impl PutResponse {
     pub fn header(&self) -> &ResponseHeader {
-	    &self.header
+        &self.header
     }
 
-	pub fn prev_kv(&self) -> Option<&KeyValue> {
-		self.prev_kv.as_ref()
-	}
+    pub fn prev_kv(&self) -> Option<&KeyValue> {
+        self.prev_kv.as_ref()
+    }
 }
 
 impl From<rpc::PutResponse> for PutResponse {
     fn from(mut resp: rpc::PutResponse) -> Self {
-	    let prev_kv = if resp.has_prev_kv() {
-		    Some(resp.take_prev_kv().into())
-	    } else {
-		    None
-	    };
+        let prev_kv = if resp.has_prev_kv() {
+            Some(resp.take_prev_kv().into())
+        } else {
+            None
+        };
 
-	    PutResponse {
-		    header: resp.take_header().into(),
-		    prev_kv,
-	    }
+        PutResponse {
+            header: resp.take_header().into(),
+            prev_kv,
+        }
     }
 }

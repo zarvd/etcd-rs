@@ -55,7 +55,7 @@ impl Event {
 impl From<proto::kv::Event> for Event {
     fn from(mut event: proto::kv::Event) -> Event {
         Event {
-	        field_type: event.field_type.into(),
+            field_type: event.field_type.into(),
             kv: event.take_kv().into(),
             prev_kv: event.take_prev_kv().into(),
         }

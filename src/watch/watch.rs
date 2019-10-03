@@ -117,7 +117,7 @@ impl WatchResponse {
     }
 
     pub fn header(&self) -> ResponseHeader {
-	    self.resp.get_header().into()
+        self.resp.get_header().into()
     }
 }
 

@@ -4,18 +4,18 @@ use crate::ResponseHeader;
 
 pub enum TxnCmp {
     Equal,
-    NotEqual,
     Greater,
     Less,
+    NotEqual,
 }
 
 impl Into<rpc::Compare_CompareResult> for TxnCmp {
     fn into(self) -> rpc::Compare_CompareResult {
         match self {
             TxnCmp::Equal => rpc::Compare_CompareResult::EQUAL,
-            TxnCmp::NotEqual => rpc::Compare_CompareResult::NOT_EQUAL,
             TxnCmp::Greater => rpc::Compare_CompareResult::GREATER,
             TxnCmp::Less => rpc::Compare_CompareResult::LESS,
+            TxnCmp::NotEqual => rpc::Compare_CompareResult::NOT_EQUAL,
         }
     }
 }
@@ -74,25 +74,11 @@ pub struct TxnRequest {
 
 impl TxnRequest {
     pub fn new() -> Self {
-        Self {
+        TxnRequest {
             compare: Default::default(),
             success: Default::default(),
             failure: Default::default(),
         }
-    }
-
-    pub fn when_value<N>(mut self, target: N, cmp: TxnCmp, value: N) -> Self
-    where
-        N: Into<Vec<u8>>,
-    {
-        let mut compare = rpc::Compare::new();
-        compare.set_target(rpc::Compare_CompareTarget::VALUE);
-        compare.set_key(target.into());
-        compare.set_result(cmp.into());
-        compare.set_value(value.into());
-
-        self.compare.push(compare);
-        self
     }
 
     pub fn when_version<N>(mut self, target: N, cmp: TxnCmp, value: i64) -> Self
@@ -137,19 +123,33 @@ impl TxnRequest {
         self
     }
 
-	pub fn when_lease<N>(mut self, target: N, cmp: TxnCmp, value: i64) -> Self
-	where
-		N: Into<Vec<u8>>,
-	{
-		let mut compare = rpc::Compare::new();
-		compare.set_target(rpc::Compare_CompareTarget::LEASE);
-		compare.set_key(target.into());
-		compare.set_result(cmp.into());
-		compare.set_lease(value);
+    pub fn when_value<N>(mut self, target: N, cmp: TxnCmp, value: N) -> Self
+    where
+        N: Into<Vec<u8>>,
+    {
+        let mut compare = rpc::Compare::new();
+        compare.set_target(rpc::Compare_CompareTarget::VALUE);
+        compare.set_key(target.into());
+        compare.set_result(cmp.into());
+        compare.set_value(value.into());
 
-		self.compare.push(compare);
-		self
-	}
+        self.compare.push(compare);
+        self
+    }
+
+    pub fn when_lease<N>(mut self, target: N, cmp: TxnCmp, value: i64) -> Self
+    where
+        N: Into<Vec<u8>>,
+    {
+        let mut compare = rpc::Compare::new();
+        compare.set_target(rpc::Compare_CompareTarget::LEASE);
+        compare.set_key(target.into());
+        compare.set_result(cmp.into());
+        compare.set_lease(value);
+
+        self.compare.push(compare);
+        self
+    }
 
     pub fn and_then<O>(mut self, op: O) -> Self
     where
@@ -172,9 +172,9 @@ impl Into<rpc::TxnRequest> for TxnRequest {
     fn into(self) -> rpc::TxnRequest {
         let mut req = rpc::TxnRequest::new();
 
-        req.set_compare(From::from(self.compare));
-        req.set_success(From::from(self.success));
-        req.set_failure(From::from(self.failure));
+        req.set_compare(self.compare.into());
+        req.set_success(self.success.into());
+        req.set_failure(self.failure.into());
 
         req
     }
@@ -190,53 +190,53 @@ pub enum TxnResult {
 
 #[derive(Debug)]
 pub struct TxnResponse {
-	header: ResponseHeader,
+    header: ResponseHeader,
     succeeded: bool,
     results: Vec<TxnResult>,
 }
 
 impl TxnResponse {
     pub fn header(&self) -> &ResponseHeader {
-	    &self.header
+        &self.header
     }
 
     pub fn is_succeeded(&self) -> bool {
-	    self.succeeded
+        self.succeeded
     }
 
     pub fn results(&self) -> &[TxnResult] {
-	    &self.results
+        &self.results
     }
 }
 
 impl From<rpc::TxnResponse> for TxnResponse {
     fn from(mut resp: rpc::TxnResponse) -> Self {
-	    let results = resp
-		    .responses
-		    .into_vec()
-		    .into_iter()
-		    .map(|resp| match resp.response {
-			    Some(rpc::ResponseOp_oneof_response::response_range(resp)) => {
-				    TxnResult::Get(resp.into())
-			    }
-			    Some(rpc::ResponseOp_oneof_response::response_put(resp)) => {
-				    TxnResult::Put(resp.into())
-			    }
-			    Some(rpc::ResponseOp_oneof_response::response_delete_range(resp)) => {
-				    TxnResult::Delete(resp.into())
-			    }
-			    Some(rpc::ResponseOp_oneof_response::response_txn(resp)) => {
-				    TxnResult::Txn(resp.into())
-			    }
-			    // FIXME: panic
-			    None => panic!("failed to fetch transaction response"),
-		    })
-		    .collect();
+        let results = resp
+            .responses
+            .into_vec()
+            .into_iter()
+            .map(|resp| match resp.response {
+                Some(rpc::ResponseOp_oneof_response::response_range(resp)) => {
+                    TxnResult::Get(resp.into())
+                }
+                Some(rpc::ResponseOp_oneof_response::response_put(resp)) => {
+                    TxnResult::Put(resp.into())
+                }
+                Some(rpc::ResponseOp_oneof_response::response_delete_range(resp)) => {
+                    TxnResult::Delete(resp.into())
+                }
+                Some(rpc::ResponseOp_oneof_response::response_txn(resp)) => {
+                    TxnResult::Txn(resp.into())
+                }
+                // FIXME: panic
+                None => panic!("failed to fetch transaction response"),
+            })
+            .collect();
 
-	    TxnResponse {
-		    header: resp.take_header().into(),
-		    succeeded: resp.succeeded,
-		    results,
-	    }
+        TxnResponse {
+            header: resp.take_header().into(),
+            succeeded: resp.succeeded,
+            results,
+        }
     }
 }
