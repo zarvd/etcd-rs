@@ -6,56 +6,81 @@ use crate::Error;
 use crate::ResponseHeader;
 
 pub struct WatchRequest {
-    key: String,
+    key: Vec<u8>,
     end_key: Option<Vec<u8>>,
     start_revision: i64,
     progress_notify: bool,
+    filters: Vec<rpc::WatchCreateRequest_FilterType>,
     prev_kv: bool,
+    watch_id: i64,
+    fragment: bool,
 }
 
 impl WatchRequest {
     pub fn key<N>(key: N) -> Self
     where
-        N: Into<String>,
+        N: Into<Vec<u8>>,
     {
-        Self {
+        WatchRequest {
             key: key.into(),
             end_key: None,
             start_revision: 0,
             progress_notify: false,
+            filters: Default::default(),
             prev_kv: false,
+            watch_id: 0,
+            fragment: false,
         }
     }
 
     pub fn prefix<N>(prefix: N) -> Self
     where
-        N: Into<String>,
+        N: Into<Vec<u8>>,
     {
         let key = prefix.into();
         let end_key = {
-            let mut end = key.clone().into_bytes();
+            let mut end = key.clone();
+            let last = end.last().copied().unwrap_or(0);
 
-            for i in (0..end.len()).rev() {
-                if end[i] < 0xff {
-                    end[i] += 1;
-                    end = end[0..=i].to_vec();
-                    break;
-                }
+            if last == std::u8::MAX {
+                end.push(1);
+            } else {
+                *end.last_mut().unwrap() += 1;
             }
 
             end
         };
-        Self {
+
+        WatchRequest {
             key,
             end_key: Some(end_key),
             start_revision: 0,
             progress_notify: false,
+            filters: Default::default(),
             prev_kv: false,
+            watch_id: 0,
+            fragment: false,
         }
     }
 
-    pub fn with_prev_kv(mut self) -> Self {
-        self.prev_kv = true;
+    pub fn range<N>(key: N, end_key: N) -> Self
+        where
+            N: Into<Vec<u8>>,
+    {
+        WatchRequest {
+            key: key.into(),
+            end_key: Some(end_key.into()),
+            start_revision: 0,
+            progress_notify: false,
+            filters: Default::default(),
+            prev_kv: false,
+            watch_id: 0,
+            fragment: false,
+        }
+    }
+
+    pub fn with_start_revision(mut self, revision: i64) -> Self {
+        self.start_revision = revision;
         self
     }
 
@@ -64,8 +89,36 @@ impl WatchRequest {
         self
     }
 
-    pub fn with_start_revision(mut self, revision: i64) -> Self {
-        self.start_revision = revision;
+    pub fn with_filter_no_put(mut self) -> Self {
+        let filter = rpc::WatchCreateRequest_FilterType::NOPUT;
+        if !self.filters.contains(&filter) {
+            self.filters.push(filter);
+        }
+
+        self
+    }
+
+    pub fn with_filter_no_delete(mut self) -> Self {
+        let filter = rpc::WatchCreateRequest_FilterType::NODELETE;
+        if !self.filters.contains(&filter) {
+            self.filters.push(filter);
+        }
+
+        self
+    }
+
+    pub fn with_prev_kv(mut self) -> Self {
+        self.prev_kv = true;
+        self
+    }
+
+    pub fn with_watch_id(mut self, id: i64) -> Self {
+        self.watch_id = id;
+        self
+    }
+
+    pub fn with_fragment(mut self) -> Self {
+        self.fragment = true;
         self
     }
 }
@@ -73,13 +126,18 @@ impl WatchRequest {
 impl Into<rpc::WatchCreateRequest> for WatchRequest {
     fn into(self) -> rpc::WatchCreateRequest {
         let mut req = rpc::WatchCreateRequest::new();
-        req.set_key(self.key.into_bytes());
+
+        req.set_key(self.key);
+        req.set_start_revision(self.start_revision);
+        req.set_progress_notify(self.progress_notify);
+        req.set_filters(self.filters);
+        req.set_prev_kv(self.prev_kv);
+        req.set_prev_kv(self.prev_kv);
+        req.set_watch_id(self.watch_id);
+        req.set_fragment(self.fragment);
         if let Some(range_end) = self.end_key {
             req.set_range_end(range_end);
         }
-        req.set_start_revision(self.start_revision);
-        req.set_prev_kv(self.prev_kv);
-        req.set_progress_notify(self.progress_notify);
 
         req
     }
@@ -87,43 +145,62 @@ impl Into<rpc::WatchCreateRequest> for WatchRequest {
 
 #[derive(Debug)]
 pub struct WatchResponse {
-    resp: rpc::WatchResponse,
+    header: ResponseHeader,
+    watch_id: i64,
+    created: bool,
+    canceled: bool,
+    compact_revision: i64,
+    cancel_reason: String,
+    fragment: bool,
+    events: Vec<Event>,
 }
 
 impl WatchResponse {
+    pub fn header(&self) -> &ResponseHeader {
+        &self.header
+    }
+
     pub fn watch_id(&self) -> i64 {
-        self.resp.get_watch_id()
+        self.watch_id
     }
 
     pub fn is_created(&self) -> bool {
-        self.resp.get_created()
+        self.created
     }
 
     pub fn is_canceled(&self) -> bool {
-        self.resp.get_canceled()
+        self.canceled
     }
 
     pub fn compact_revision(&self) -> i64 {
-        self.resp.get_compact_revision()
+        self.compact_revision
     }
 
-    pub fn events(&self) -> Vec<Event> {
-        // FIXME perf
-        self.resp
-            .get_events()
-            .iter()
-            .map(|e| From::from(e.clone()))
-            .collect()
+    pub fn cancel_reason(&self) -> &str {
+        &self.cancel_reason
     }
 
-    pub fn header(&self) -> ResponseHeader {
-        self.resp.get_header().into()
+    pub fn fragment(&self) -> bool {
+        self.fragment
+    }
+
+    pub fn events(&self) -> &[Event] {
+        &self.events
     }
 }
 
 impl From<rpc::WatchResponse> for WatchResponse {
-    fn from(resp: rpc::WatchResponse) -> Self {
-        Self { resp }
+    fn from(mut resp: rpc::WatchResponse) -> Self {
+        WatchResponse {
+            header: resp.take_header().into(),
+            watch_id: resp.watch_id,
+            created: resp.created,
+            canceled: resp.canceled,
+            compact_revision: resp.compact_revision,
+            cancel_reason: resp.cancel_reason,
+            fragment: resp.fragment,
+            events: resp.events.into_vec().into_iter().map(Into::into).collect(),
+        }
     }
 }
 
@@ -146,7 +223,7 @@ impl Watch {
             create_req
         };
 
-        Self {
+        Watch {
             sender,
             receiver,
             create_req,
@@ -163,23 +240,20 @@ impl Stream for Watch {
         if !self.sent {
             match self
                 .sender
-                .start_send((self.create_req.clone(), Default::default()))
+                .start_send((self.create_req.clone(), Default::default()))?
             {
-                Ok(AsyncSink::NotReady(_)) => return Ok(Async::NotReady),
-                Ok(AsyncSink::Ready) => {
+                AsyncSink::NotReady(_) => return Ok(Async::NotReady),
+                AsyncSink::Ready => {
                     self.sent = true;
                 }
-                Err(e) => return Err(Error::GrpcFailure(e)),
             }
         }
 
-        self.sender.poll_complete().unwrap();
-
-        match self.receiver.poll() {
-            Ok(Async::Ready(Some(resp))) => Ok(Async::Ready(Some(From::from(resp)))),
-            Ok(Async::Ready(None)) => Ok(Async::Ready(None)),
-            Ok(Async::NotReady) => Ok(Async::NotReady),
-            Err(e) => Err(Error::GrpcFailure(e)),
+        self.sender.poll_complete()?;
+        match self.receiver.poll()? {
+            Async::Ready(Some(resp)) => Ok(Async::Ready(Some(resp.into()))),
+            Async::Ready(None) => Ok(Async::Ready(None)),
+            Async::NotReady => Ok(Async::NotReady),
         }
     }
 }
