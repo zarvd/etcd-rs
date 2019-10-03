@@ -1,4 +1,5 @@
 use std::str::Utf8Error;
+use std::string::FromUtf8Error;
 
 use crate::proto::lock as rpc;
 use crate::ResponseHeader;
@@ -49,6 +50,14 @@ impl LockResponse {
 
     pub fn raw_key(&self) -> &[u8] {
         &self.key
+    }
+
+    pub fn into_key(self) -> Result<String, FromUtf8Error> {
+        String::from_utf8(self.key)
+    }
+
+    pub fn into_raw_key(self) -> Vec<u8> {
+        self.key
     }
 }
 

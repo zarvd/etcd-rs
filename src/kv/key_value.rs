@@ -1,4 +1,5 @@
 use std::str::Utf8Error;
+use std::string::FromUtf8Error;
 
 use crate::proto::kv;
 
@@ -21,12 +22,39 @@ impl KeyValue {
         &self.key
     }
 
+    pub fn into_key(self) -> Result<String, FromUtf8Error> {
+        String::from_utf8(self.key)
+    }
+
+    pub fn into_raw_key(self) -> Vec<u8> {
+        self.key
+    }
+
     pub fn value(&self) -> Result<&str, Utf8Error> {
         std::str::from_utf8(&self.value)
     }
 
     pub fn raw_value(&self) -> &[u8] {
         &self.value
+    }
+
+    pub fn into_value(self) -> Result<String, FromUtf8Error> {
+        String::from_utf8(self.value)
+    }
+
+    pub fn into_raw_value(self) -> Vec<u8> {
+        self.value
+    }
+
+    pub fn into_key_value(self) -> Result<(String, String), FromUtf8Error> {
+        let key = String::from_utf8(self.key)?;
+        let value = String::from_utf8(self.value)?;
+
+        Ok((key, value))
+    }
+
+    pub fn into_raw_key_value(self) -> (Vec<u8>, Vec<u8>) {
+        (self.key, self.value)
     }
 
     pub fn version(&self) -> i64 {

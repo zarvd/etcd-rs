@@ -96,6 +96,10 @@ impl DeleteResponse {
     pub fn prev_kvs(&self) -> &[KeyValue] {
         &self.prev_kvs
     }
+
+    pub fn into_prev_kvs(self) -> Vec<KeyValue> {
+        self.prev_kvs
+    }
 }
 
 impl From<rpc::DeleteRangeResponse> for DeleteResponse {

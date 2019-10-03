@@ -79,6 +79,10 @@ impl PutResponse {
     pub fn prev_kv(&self) -> Option<&KeyValue> {
         self.prev_kv.as_ref()
     }
+
+    pub fn into_prev_kv(self) -> Option<KeyValue> {
+        self.prev_kv
+    }
 }
 
 impl From<rpc::PutResponse> for PutResponse {

@@ -210,6 +210,10 @@ impl TxnResponse {
     pub fn results(&self) -> &[TxnResult] {
         &self.results
     }
+
+    pub fn into_results(self) -> Vec<TxnResult> {
+        self.results
+    }
 }
 
 impl From<rpc::TxnResponse> for TxnResponse {

@@ -205,18 +205,14 @@ impl Into<rpc::RangeRequest> for GetRequest {
 #[derive(Clone, Debug)]
 pub struct GetResponse {
     header: ResponseHeader,
-    kvs: Vec<KeyValue>,
     more: bool,
     count: i64,
+    kvs: Vec<KeyValue>,
 }
 
 impl GetResponse {
     pub fn header(&self) -> &ResponseHeader {
         &self.header
-    }
-
-    pub fn kvs(&self) -> &[KeyValue] {
-        &self.kvs
     }
 
     pub fn has_more(&self) -> bool {
@@ -226,15 +222,23 @@ impl GetResponse {
     pub fn count(&self) -> i64 {
         self.count
     }
+
+    pub fn kvs(&self) -> &[KeyValue] {
+        &self.kvs
+    }
+
+    pub fn into_kvs(self) -> Vec<KeyValue> {
+        self.kvs
+    }
 }
 
 impl From<rpc::RangeResponse> for GetResponse {
     fn from(mut resp: rpc::RangeResponse) -> Self {
         GetResponse {
             header: resp.take_header().into(),
-            kvs: resp.kvs.into_vec().into_iter().map(Into::into).collect(),
             more: resp.more,
             count: resp.count,
+            kvs: resp.kvs.into_vec().into_iter().map(Into::into).collect(),
         }
     }
 }

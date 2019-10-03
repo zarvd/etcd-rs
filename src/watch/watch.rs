@@ -188,6 +188,10 @@ impl WatchResponse {
     pub fn events(&self) -> &[Event] {
         &self.events
     }
+
+    pub fn into_events(self) -> Vec<Event> {
+        self.events
+    }
 }
 
 impl From<rpc::WatchResponse> for WatchResponse {

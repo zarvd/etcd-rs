@@ -47,8 +47,20 @@ impl Event {
         &self.kv
     }
 
+    pub fn into_kv(self) -> KeyValue {
+        self.kv
+    }
+
     pub fn prev_kv(&self) -> &KeyValue {
         &self.prev_kv
+    }
+
+    pub fn into_prev_kv(self) -> KeyValue {
+        self.prev_kv
+    }
+
+    pub fn into_kv_prev_kv(self) -> (KeyValue, KeyValue) {
+        (self.kv, self.prev_kv)
     }
 }
 
