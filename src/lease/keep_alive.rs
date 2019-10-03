@@ -54,30 +54,54 @@ impl From<rpc::LeaseKeepAliveResponse> for KeepAliveResponse {
     }
 }
 
-// pub struct KeepAlive {
-//     sender: grpcio::ClientDuplexSender<rpc::LeaseKeepAliveRequest>,
-//     receiver: grpcio::ClientDuplexReceiver<rpc::LeaseKeepAliveResponse>,
-//     req: rpc::LeaseKeepAliveRequest,
-// }
+pub struct KeepAlive {
+    sender: grpcio::ClientDuplexSender<rpc::LeaseKeepAliveRequest>,
+    receiver: grpcio::ClientDuplexReceiver<rpc::LeaseKeepAliveResponse>,
+    req: rpc::LeaseKeepAliveRequest,
+    sent: bool,
+}
 
-// impl KeepAlive {
-//     pub fn new(
-//         sender: grpcio::ClientDuplexSender<rpc::LeaseKeepAliveRequest>,
-//         receiver: grpcio::ClientDuplexReceiver<rpc::LeaseKeepAliveResponse>,
-//         req: KeepAliveRequest,
-//     ) -> Self {
-//         Self {
-//             sender,
-//             receiver,
-//             req: req.into(),
-//         }
-//     }
-// }
+impl KeepAlive {
+    pub fn new(
+        sender: grpcio::ClientDuplexSender<rpc::LeaseKeepAliveRequest>,
+        receiver: grpcio::ClientDuplexReceiver<rpc::LeaseKeepAliveResponse>,
+        req: KeepAliveRequest,
+    ) -> Self {
+        KeepAlive {
+            sender,
+            receiver,
+            req: req.into(),
+            sent: false,
+        }
+    }
+}
 
-// impl Stream for KeepAlive {
-//     type Item = KeepAliveResponse;
-//     type Error = Error;
+impl Stream for KeepAlive {
+    type Item = KeepAliveResponse;
+    type Error = Error;
 
-//     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-//     }
-// }
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        if !self.sent {
+            match self
+                .sender
+                .start_send((self.req.clone(), Default::default()))?
+            {
+                AsyncSink::NotReady(_) => return Ok(Async::NotReady),
+                AsyncSink::Ready => {
+                    self.sent = true;
+                }
+            }
+        }
+
+        self.sender.poll_complete()?;
+        match self.receiver.poll()? {
+            Async::Ready(Some(resp)) => {
+                self.sent = false;
+
+                Ok(Async::Ready(Some(resp.into())))
+            },
+            Async::Ready(None) => Ok(Async::Ready(None)),
+            Async::NotReady => Ok(Async::NotReady),
+        }
+    }
+}

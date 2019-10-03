@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use futures::{Future, Sink, Stream};
+use futures::{Future, Stream};
 
 use crate::client::Inner;
 use crate::lease::{
-    GrantRequest, GrantResponse, KeepAliveRequest, KeepAliveResponse, RevokeRequest,
+    GrantRequest, GrantResponse, KeepAlive, KeepAliveRequest, KeepAliveResponse, RevokeRequest,
     RevokeResponse, TtlRequest, TtlResponse,
 };
 use crate::Error;
@@ -19,34 +19,10 @@ impl LeaseClient {
         Self { inner }
     }
 
-    // TODO streaming keep alive
-    // pub fn keep_alive(
-    //     &self,
-    //     req: KeepAliveRequest,
-    // ) -> impl Stream<Item = KeepAliveResponse, Error = Error> {
-    // }
-
-    /// perf
-    pub fn keep_alive_once(
-        &self,
-        req: KeepAliveRequest,
-    ) -> impl Future<Item = KeepAliveResponse, Error = Error> {
+    pub fn keep_alive(&self, req: KeepAliveRequest) -> impl Stream<Item = KeepAliveResponse, Error = Error> {
         let (sink, receiver) = self.inner.lease.lease_keep_alive().unwrap();
 
-        sink.send((req.into(), Default::default()))
-            .and_then(move |mut sink| {
-                // NOTE sink must live longer than the following operations
-                // otherwise it will close the shared channel
-
-                receiver
-                    .into_future()
-                    .map(move |(resp, _)| {
-                        sink.close(); // close explicitly without unwrapping
-                        From::from(resp.unwrap())
-                    })
-                    .map_err(|(e, _)| e)
-            })
-            .or_else(|e| Err(Error::GrpcFailure(e)))
+        KeepAlive::new(sink, receiver, req)
     }
 
     pub fn grant(&self, req: GrantRequest) -> impl Future<Item = GrantResponse, Error = Error> {
