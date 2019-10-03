@@ -16,8 +16,8 @@ pub use crate::{
 
 pub mod prelude {
     pub use crate::kv::{
-        DeleteRequest, DeleteResponse, GetRequest, GetResponse, KeyValue, PutRequest, PutResponse,
-        TxnCmp, TxnOp, TxnRequest, TxnResponse, TxnResult,
+        DeleteRequest, DeleteResponse, Event, EventType, GetRequest, GetResponse, KeyValue,
+        PutRequest, PutResponse, TxnCmp, TxnOp, TxnRequest, TxnResponse, TxnResult,
     };
 
     pub use crate::lease::{
