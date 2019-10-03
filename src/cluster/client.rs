@@ -5,6 +5,7 @@ use futures::Future;
 use crate::client::Inner;
 use crate::proto::rpc::MemberListRequest;
 
+#[derive(Clone)]
 pub struct ClusterClient {
     inner: Arc<Inner>,
 }
