@@ -3,6 +3,7 @@ use std::str::Utf8Error;
 use crate::proto::lock as rpc;
 use crate::ResponseHeader;
 
+#[derive(Clone, Debug)]
 pub struct LockRequest {
     name: Vec<u8>,
     lease: i64,
@@ -31,6 +32,7 @@ impl Into<rpc::LockRequest> for LockRequest {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct LockResponse {
     header: ResponseHeader,
     key: Vec<u8>,

@@ -2,6 +2,7 @@ use crate::kv::KeyValue;
 use crate::proto::rpc;
 use crate::ResponseHeader;
 
+#[derive(Clone, Debug)]
 pub struct DeleteRequest {
     key: Vec<u8>,
     end_key: Option<Vec<u8>>,
@@ -38,12 +39,12 @@ impl DeleteRequest {
         let key = prefix.into();
         let end_key = {
             let mut end = key.clone();
-            let last = end.last_mut().copied().unwrap_or(0);
+            let last = end.last().copied().unwrap_or(0);
 
             if last == std::u8::MAX {
                 end.push(1);
             } else {
-                last += 1;
+                *end.last_mut().unwrap() += 1;
             }
 
             end
@@ -76,7 +77,7 @@ impl Into<rpc::DeleteRangeRequest> for DeleteRequest {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct DeleteResponse {
     header: ResponseHeader,
     deleted: i64,
@@ -106,7 +107,7 @@ impl From<rpc::DeleteRangeResponse> for DeleteResponse {
                 .prev_kvs
                 .into_vec()
                 .into_iter()
-                .map(|kv| kv.into())
+                .map(Into::into)
                 .collect(),
         }
     }

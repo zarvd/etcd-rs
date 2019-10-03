@@ -2,6 +2,7 @@ use crate::kv::KeyValue;
 use crate::proto::rpc;
 use crate::ResponseHeader;
 
+#[derive(Clone, Debug)]
 pub struct PutRequest {
     key: Vec<u8>,
     value: Vec<u8>,
@@ -64,7 +65,7 @@ impl Into<rpc::PutRequest> for PutRequest {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct PutResponse {
     header: ResponseHeader,
     prev_kv: Option<KeyValue>,

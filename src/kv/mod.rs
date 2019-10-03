@@ -16,7 +16,7 @@ pub use crate::kv::{
 
 use crate::proto;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum EventType {
     Put,
     Delete,
@@ -31,7 +31,7 @@ impl From<proto::kv::Event_EventType> for EventType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Event {
     field_type: EventType,
     kv: KeyValue,

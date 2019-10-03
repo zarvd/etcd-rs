@@ -3,6 +3,7 @@ use std::str::Utf8Error;
 use crate::proto::rpc;
 use crate::ResponseHeader;
 
+#[derive(Clone, Debug)]
 pub struct TtlRequest {
     id: i64,
     with_keys: bool,
@@ -33,6 +34,7 @@ impl Into<rpc::LeaseTimeToLiveRequest> for TtlRequest {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct TtlResponse {
     header: ResponseHeader,
     id: i64,

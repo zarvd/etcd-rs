@@ -1,7 +1,10 @@
+use futures::{Async, AsyncSink, Poll, Sink, Stream};
+
 use crate::proto::rpc;
+use crate::Error;
 use crate::ResponseHeader;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct KeepAliveRequest {
     id: i64,
 }
@@ -20,7 +23,7 @@ impl Into<rpc::LeaseKeepAliveRequest> for KeepAliveRequest {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct KeepAliveResponse {
     header: ResponseHeader,
     id: i64,

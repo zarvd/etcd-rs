@@ -2,6 +2,7 @@ use crate::kv::{DeleteRequest, DeleteResponse, GetRequest, GetResponse, PutReque
 use crate::proto::rpc;
 use crate::ResponseHeader;
 
+#[derive(Copy, Clone, Debug)]
 pub enum TxnCmp {
     Equal,
     Greater,
@@ -20,6 +21,7 @@ impl Into<rpc::Compare_CompareResult> for TxnCmp {
     }
 }
 
+#[derive(Clone, Debug)]
 pub enum TxnOp {
     Get(GetRequest),
     Put(PutRequest),
@@ -66,6 +68,7 @@ impl Into<rpc::RequestOp> for TxnOp {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct TxnRequest {
     compare: Vec<rpc::Compare>,
     success: Vec<rpc::RequestOp>,
@@ -180,7 +183,7 @@ impl Into<rpc::TxnRequest> for TxnRequest {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum TxnResult {
     Get(GetResponse),
     Put(PutResponse),
@@ -188,7 +191,7 @@ pub enum TxnResult {
     Txn(TxnResponse),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct TxnResponse {
     header: ResponseHeader,
     succeeded: bool,
@@ -211,6 +214,7 @@ impl TxnResponse {
 
 impl From<rpc::TxnResponse> for TxnResponse {
     fn from(mut resp: rpc::TxnResponse) -> Self {
+        let header = resp.take_header().into();
         let results = resp
             .responses
             .into_vec()
@@ -234,7 +238,7 @@ impl From<rpc::TxnResponse> for TxnResponse {
             .collect();
 
         TxnResponse {
-            header: resp.take_header().into(),
+            header,
             succeeded: resp.succeeded,
             results,
         }

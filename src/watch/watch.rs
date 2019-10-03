@@ -5,6 +5,7 @@ use crate::proto::rpc;
 use crate::Error;
 use crate::ResponseHeader;
 
+#[derive(Clone, Debug)]
 pub struct WatchRequest {
     key: Vec<u8>,
     end_key: Option<Vec<u8>>,
@@ -143,7 +144,7 @@ impl Into<rpc::WatchCreateRequest> for WatchRequest {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct WatchResponse {
     header: ResponseHeader,
     watch_id: i64,

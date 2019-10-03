@@ -6,6 +6,7 @@ use super::{LockRequest, LockResponse, UnlockRequest, UnlockResponse};
 use crate::client::Inner;
 use crate::Error;
 
+#[derive(Clone)]
 pub struct LockClient {
     inner: Arc<Inner>,
 }
