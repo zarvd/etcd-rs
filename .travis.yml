@@ -11,7 +11,7 @@ before_script:
   - cargo clean
 
 script:
+  - cargo build --verbose --all
   # Check formatting
   - cargo fmt --all -- --check
-  - cargo build --verbose --all
   - cargo test --verbose --all
