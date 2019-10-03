@@ -3,5 +3,7 @@ mod watch;
 
 pub use crate::watch::{
     client::WatchClient,
-    watch::{Watch, WatchRequest, WatchResponse},
+    watch::{WatchRequest, WatchResponse},
 };
+
+pub(super) use crate::watch::watch::Watch;

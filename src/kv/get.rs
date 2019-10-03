@@ -232,12 +232,7 @@ impl From<rpc::RangeResponse> for GetResponse {
     fn from(mut resp: rpc::RangeResponse) -> Self {
         GetResponse {
             header: resp.take_header().into(),
-            kvs: resp
-                .kvs
-                .into_vec()
-                .into_iter()
-                .map(Into::into)
-                .collect(),
+            kvs: resp.kvs.into_vec().into_iter().map(Into::into).collect(),
             more: resp.more,
             count: resp.count,
         }

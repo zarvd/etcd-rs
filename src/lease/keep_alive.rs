@@ -54,7 +54,7 @@ impl From<rpc::LeaseKeepAliveResponse> for KeepAliveResponse {
     }
 }
 
-pub struct KeepAlive {
+pub(crate) struct KeepAlive {
     sender: grpcio::ClientDuplexSender<rpc::LeaseKeepAliveRequest>,
     receiver: grpcio::ClientDuplexReceiver<rpc::LeaseKeepAliveResponse>,
     req: rpc::LeaseKeepAliveRequest,
@@ -62,7 +62,7 @@ pub struct KeepAlive {
 }
 
 impl KeepAlive {
-    pub fn new(
+    pub(crate) fn new(
         sender: grpcio::ClientDuplexSender<rpc::LeaseKeepAliveRequest>,
         receiver: grpcio::ClientDuplexReceiver<rpc::LeaseKeepAliveResponse>,
         req: KeepAliveRequest,
@@ -99,7 +99,7 @@ impl Stream for KeepAlive {
                 self.sent = false;
 
                 Ok(Async::Ready(Some(resp.into())))
-            },
+            }
             Async::Ready(None) => Ok(Async::Ready(None)),
             Async::NotReady => Ok(Async::NotReady),
         }

@@ -19,7 +19,10 @@ impl LeaseClient {
         Self { inner }
     }
 
-    pub fn keep_alive(&self, req: KeepAliveRequest) -> impl Stream<Item = KeepAliveResponse, Error = Error> {
+    pub fn keep_alive(
+        &self,
+        req: KeepAliveRequest,
+    ) -> impl Stream<Item = KeepAliveResponse, Error = Error> {
         let (sink, receiver) = self.inner.lease.lease_keep_alive().unwrap();
 
         KeepAlive::new(sink, receiver, req)

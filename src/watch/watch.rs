@@ -65,8 +65,8 @@ impl WatchRequest {
     }
 
     pub fn range<N>(key: N, end_key: N) -> Self
-        where
-            N: Into<Vec<u8>>,
+    where
+        N: Into<Vec<u8>>,
     {
         WatchRequest {
             key: key.into(),
@@ -205,7 +205,7 @@ impl From<rpc::WatchResponse> for WatchResponse {
     }
 }
 
-pub struct Watch {
+pub(crate) struct Watch {
     sender: grpcio::ClientDuplexSender<rpc::WatchRequest>,
     receiver: grpcio::ClientDuplexReceiver<rpc::WatchResponse>,
     create_req: rpc::WatchRequest,
@@ -213,7 +213,7 @@ pub struct Watch {
 }
 
 impl Watch {
-    pub fn new(
+    pub(crate) fn new(
         sender: grpcio::ClientDuplexSender<rpc::WatchRequest>,
         receiver: grpcio::ClientDuplexReceiver<rpc::WatchResponse>,
         req: WatchRequest,

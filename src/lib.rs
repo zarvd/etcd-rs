@@ -16,13 +16,13 @@ pub use crate::{
 
 pub mod prelude {
     pub use crate::kv::{
-        DeleteRequest, DeleteResponse, GetRequest, GetResponse, KvClient, PutRequest, PutResponse,
+        DeleteRequest, DeleteResponse, GetRequest, GetResponse, KeyValue, PutRequest, PutResponse,
         TxnCmp, TxnOp, TxnRequest, TxnResponse, TxnResult,
     };
 
     pub use crate::lease::{
-        GrantRequest, GrantResponse, KeepAliveRequest, KeepAliveResponse, LeaseClient,
-        RevokeRequest, RevokeResponse, TtlRequest, TtlResponse,
+        GrantRequest, GrantResponse, KeepAliveRequest, KeepAliveResponse, RevokeRequest,
+        RevokeResponse, TtlRequest, TtlResponse,
     };
 
     pub use crate::watch::{WatchRequest, WatchResponse};
