@@ -34,7 +34,8 @@ fn main() {
                 .get(GetRequest::key("result"))
                 .map(|resp| {
                     let kv = &resp.kvs()[0];
-                    println!("key: {}, value: {}", kv.key(), kv.value()); // result: good or result: bad
+                    // result: good or result: bad
+                    println!("key: {}, value: {}", kv.key().unwrap(), kv.value().unwrap());
                 })
                 .map_err(|e| println!("failed to fetch key-value 'result': {:?}", e))
         });

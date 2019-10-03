@@ -20,7 +20,7 @@ fn main() {
                 .map_err(|e| println!("failed to fetch key from etcd: {:?}", e))
                 .and_then(move |resp| {
                     for kv in resp.kvs() {
-                        println!("k: {}, v: {}", kv.key(), kv.value());
+                        println!("k: {}, v: {}", kv.key().unwrap(), kv.value().unwrap());
                     }
                     client
                         .kv()

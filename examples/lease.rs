@@ -18,32 +18,25 @@ fn main() {
         .map_err(|_| ())
         .and_then(move |resp| {
             let lease_id = resp.id();
-
-            let keep_alive = {
-                let lease_client = client.lease();
-                tokio::timer::Interval::new_interval(Duration::from_secs(1))
-                    .map_err(|_| ())
-                    .and_then(move |_| {
-                        lease_client
-                            .keep_alive_once(KeepAliveRequest::new(lease_id))
-                            .then(|r| match r {
-                                Ok(resp) => {
-                                    if resp.ttl() == 0 {
-                                        println!("lease expired");
-                                        Err(())
-                                    } else {
-                                        println!("keeping alive: {:?}", resp);
-                                        Ok(())
-                                    }
-                                }
-                                Err(e) => {
-                                    println!("failed to keep alive: {:?}", e);
-                                    Err(())
-                                }
-                            })
-                    })
-                    .for_each(|_| Ok(()))
-            };
+            let lease_client = client.lease();
+            let keep_alive = lease_client
+                .keep_alive(KeepAliveRequest::new(lease_id))
+                .then(|res| match res {
+                    Ok(resp) => {
+                        if resp.ttl() == 0 {
+                            println!("lease expired");
+                            Err(())
+                        } else {
+                            println!("keeping alive: {:?}", resp);
+                            Ok(())
+                        }
+                    }
+                    Err(err) => {
+                        println!("failed to keep alive: {:?}", err);
+                        Err(())
+                    }
+                })
+                .for_each(|_| Ok(()));
 
             tokio::spawn(keep_alive);
 
