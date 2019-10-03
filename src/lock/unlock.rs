@@ -10,30 +10,32 @@ impl UnlockRequest {
     where
         K: Into<Vec<u8>>,
     {
-        Self { key: key.into() }
+        UnlockRequest { key: key.into() }
     }
 }
 
-impl From<UnlockRequest> for rpc::UnlockRequest {
-    fn from(req: UnlockRequest) -> Self {
-        let mut result = Self::new();
-        result.set_key(req.key);
+impl Into<rpc::UnlockRequest> for UnlockRequest {
+    fn into(self) -> rpc::UnlockRequest {
+        let mut result = rpc::UnlockRequest::new();
+        result.set_key(self.key);
         result
     }
 }
 
 pub struct UnlockResponse {
-    resp: rpc::UnlockResponse,
+    header: ResponseHeader,
 }
 
 impl UnlockResponse {
-    pub fn header(&self) -> ResponseHeader {
-        self.resp.get_header().into()
+    pub fn header(&self) -> &ResponseHeader {
+        &self.header
     }
 }
 
 impl From<rpc::UnlockResponse> for UnlockResponse {
-    fn from(resp: rpc::UnlockResponse) -> Self {
-        Self { resp }
+    fn from(mut resp: rpc::UnlockResponse) -> Self {
+        UnlockResponse {
+            header: resp.take_header().into(),
+        }
     }
 }
