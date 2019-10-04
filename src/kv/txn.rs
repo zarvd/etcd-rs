@@ -2,7 +2,7 @@ use crate::kv::{DeleteRequest, DeleteResponse, GetRequest, GetResponse, PutReque
 use crate::proto::rpc;
 use crate::ResponseHeader;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum TxnCmp {
     Equal,
     Greater,
