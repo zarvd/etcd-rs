@@ -14,9 +14,13 @@ license = "MIT"
 all-features = true
 
 [dependencies]
-grpcio = "0.4"
-futures = "0.1"
-protobuf = { version = "2", features = ["with-bytes"] }
+tonic = { version = "0.1.0-alpha.4" }
+bytes = "0.4"
+prost = "0.5"
+prost-derive = "0.5"
 
 [dev-dependencies]
 tokio = "0.1"
+
+[build-dependencies]
+tonic-build = "0.1.0-alpha.4"
