@@ -1,4 +1,5 @@
 mod client;
+mod kv;
 
 pub mod proto {
     pub mod mvccpb {
@@ -17,3 +18,6 @@ pub mod proto {
         tonic::include_proto!("v3lockpb");
     }
 }
+
+pub use client::{Client, ClientConfig};
+pub use kv::{Kv, PutRequest, PutResponse};

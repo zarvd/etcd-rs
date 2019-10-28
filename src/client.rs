@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use tonic::transport::Channel;
 
+use crate::kv::Kv;
 use crate::proto::etcdserverpb::client::{
     AuthClient, ClusterClient, KvClient, LeaseClient, MaintenanceClient, WatchClient,
 };
@@ -15,14 +16,15 @@ pub struct Client {
     inner: Arc<Inner>,
 }
 
-struct Inner {
-    channel: Channel,
-    auth_client: AuthClient<Channel>,
-    cluster_client: ClusterClient<Channel>,
-    kv_client: KvClient<Channel>,
-    lease_client: LeaseClient<Channel>,
-    maintenance_client: MaintenanceClient<Channel>,
-    watch_client: WatchClient<Channel>,
+pub(crate) struct Inner {
+    pub channel: Channel,
+    pub kv_client: Kv,
+    // pub auth_client: AuthClient<Channel>,
+    // pub cluster_client: ClusterClient<Channel>,
+    // pub kv_client: KvClient<Channel>,
+    // pub lease_client: LeaseClient<Channel>,
+    // pub maintenance_client: MaintenanceClient<Channel>,
+    // pub watch_client: WatchClient<Channel>,
 }
 
 impl Client {
@@ -36,25 +38,29 @@ impl Client {
         };
 
         let inner = {
-            let auth_client = AuthClient::new(channel.clone());
-            let kv_client = KvClient::new(channel.clone());
-            let cluster_client = ClusterClient::new(channel.clone());
-            let lease_client = LeaseClient::new(channel.clone());
-            let maintenance_client = MaintenanceClient::new(channel.clone());
-            let watch_client = WatchClient::new(channel.clone());
+            // let auth_client = AuthClient::new(channel.clone());
+            let kv_client = Kv::new(KvClient::new(channel.clone()));
+            // let cluster_client = ClusterClient::new(channel.clone());
+            // let lease_client = LeaseClient::new(channel.clone());
+            // let maintenance_client = MaintenanceClient::new(channel.clone());
+            // let watch_client = WatchClient::new(channel.clone());
             Inner {
                 channel,
-                auth_client,
-                cluster_client,
+                // auth_client,
+                // cluster_client,
                 kv_client,
-                lease_client,
-                maintenance_client,
-                watch_client,
+                // lease_client,
+                // maintenance_client,
+                // watch_client,
             }
         };
 
         Self {
             inner: Arc::new(inner),
         }
+    }
+
+    pub fn kv(&self) -> Kv {
+        self.inner.kv_client.clone()
     }
 }
