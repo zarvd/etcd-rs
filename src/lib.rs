@@ -22,7 +22,7 @@ pub mod proto {
 pub use client::{Client, ClientConfig};
 pub use kv::{
     DeleteRequest, DeleteResponse, KeyValue, Kv, PutRequest, PutResponse, RangeRequest,
-    RangeResponse,
+    RangeResponse, TxnCmp, TxnRequest, TxnResponse,
 };
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
