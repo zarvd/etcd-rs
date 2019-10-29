@@ -16,8 +16,12 @@ async fn list_prefix(client: &Client) -> Result<()> {
     {
         // List key-value pairs with prefix
         let req = RangeRequest::prefix(prefix);
-        let resp = client.kv().range(req).await?;
+        let mut resp = client.kv().range(req).await?;
+
         println!("Range Response: {:?}", resp);
+        for kv in resp.take_kvs() {
+            println!("{:?} -> {:?}", kv.key_str(), kv.value_str());
+        }
     }
 
     Ok(())

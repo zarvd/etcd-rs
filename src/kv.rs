@@ -1,7 +1,7 @@
 use tonic::transport::Channel;
 
-use crate::proto::etcdserverpb as pb;
 use crate::proto::etcdserverpb::client::KvClient;
+use crate::proto::{etcdserverpb, mvccpb};
 use crate::Result;
 
 #[derive(Clone)]
@@ -27,8 +27,65 @@ impl Kv {
     }
 }
 
+#[derive(Clone, PartialEq)]
+pub struct KeyValue {
+    proto: mvccpb::KeyValue,
+}
+
+impl KeyValue {
+    pub fn key(&self) -> &[u8] {
+        &self.proto.key
+    }
+
+    pub fn take_key(&mut self) -> Vec<u8> {
+        std::mem::take(&mut self.proto.key)
+    }
+
+    pub fn key_str(&self) -> &str {
+        std::str::from_utf8(&self.proto.key).expect("convert bytes to string")
+    }
+
+    pub fn value(&self) -> &[u8] {
+        &self.proto.value
+    }
+
+    pub fn take_value(&mut self) -> Vec<u8> {
+        std::mem::take(&mut self.proto.value)
+    }
+
+    pub fn value_str(&self) -> &str {
+        std::str::from_utf8(&self.proto.value).expect("convert bytes to string")
+    }
+
+    pub fn create_revision(&self) -> usize {
+        self.proto.create_revision as usize
+    }
+
+    pub fn mod_revision(&self) -> usize {
+        self.proto.mod_revision as usize
+    }
+
+    pub fn version(&self) -> usize {
+        self.proto.version as usize
+    }
+
+    pub fn lease(&self) -> usize {
+        self.proto.lease as usize
+    }
+
+    pub fn has_lease(&self) -> bool {
+        self.proto.lease != 0
+    }
+}
+
+impl From<mvccpb::KeyValue> for KeyValue {
+    fn from(kv: mvccpb::KeyValue) -> Self {
+        Self { proto: kv }
+    }
+}
+
 pub struct PutRequest {
-    proto: pb::PutRequest,
+    proto: etcdserverpb::PutRequest,
 }
 
 impl PutRequest {
@@ -38,7 +95,7 @@ impl PutRequest {
         V: Into<Vec<u8>>,
     {
         Self {
-            proto: pb::PutRequest {
+            proto: etcdserverpb::PutRequest {
                 key: key.into(),
                 value: value.into(),
                 lease: 0,
@@ -68,23 +125,23 @@ impl PutRequest {
 
 #[derive(Debug)]
 pub struct PutResponse {
-    proto: pb::PutResponse,
+    proto: etcdserverpb::PutResponse,
 }
 
-impl From<pb::PutResponse> for PutResponse {
-    fn from(resp: pb::PutResponse) -> Self {
+impl From<etcdserverpb::PutResponse> for PutResponse {
+    fn from(resp: etcdserverpb::PutResponse) -> Self {
         Self { proto: resp }
     }
 }
 
 pub struct RangeRequest {
-    proto: pb::RangeRequest,
+    proto: etcdserverpb::RangeRequest,
 }
 
 impl RangeRequest {
     fn new(key: Vec<u8>, range_end: Vec<u8>) -> Self {
         Self {
-            proto: pb::RangeRequest {
+            proto: etcdserverpb::RangeRequest {
                 key: key,
                 range_end: range_end,
                 limit: 0,
@@ -149,11 +206,27 @@ impl RangeRequest {
 
 #[derive(Debug)]
 pub struct RangeResponse {
-    proto: pb::RangeResponse,
+    proto: etcdserverpb::RangeResponse,
 }
 
-impl From<pb::RangeResponse> for RangeResponse {
-    fn from(resp: pb::RangeResponse) -> Self {
+impl RangeResponse {
+    pub fn take_kvs(&mut self) -> Vec<KeyValue> {
+        let kvs = std::mem::take(&mut self.proto.kvs);
+
+        kvs.into_iter().map(From::from).collect()
+    }
+
+    pub fn has_more(&self) -> bool {
+        self.proto.more
+    }
+
+    pub fn count(&self) -> usize {
+        self.proto.count as usize
+    }
+}
+
+impl From<etcdserverpb::RangeResponse> for RangeResponse {
+    fn from(resp: etcdserverpb::RangeResponse) -> Self {
         Self { proto: resp }
     }
 }
