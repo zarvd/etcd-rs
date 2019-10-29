@@ -37,7 +37,7 @@ async fn list_all(client: &Client) -> Result<()> {
         // List all key-value pairs
         let req = {
             let mut req = RangeRequest::all();
-            req.set_limit(4);  // Only returns 4 key-value pairs
+            req.set_limit(4); // Only returns 4 key-value pairs
             req
         };
         let resp = client.kv().range(req).await?;
