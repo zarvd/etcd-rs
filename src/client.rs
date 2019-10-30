@@ -1,10 +1,10 @@
 use std::sync::Arc;
 use tonic::transport::Channel;
 
-use crate::kv::Kv;
 use crate::proto::etcdserverpb::client::{
     AuthClient, ClusterClient, KvClient, LeaseClient, MaintenanceClient, WatchClient,
 };
+use crate::{Kv, Watch};
 
 pub struct ClientConfig {
     pub endpoints: Vec<String>,
@@ -16,9 +16,10 @@ pub struct Client {
     inner: Arc<Inner>,
 }
 
-pub(crate) struct Inner {
-    pub channel: Channel,
-    pub kv_client: Kv,
+pub struct Inner {
+    channel: Channel,
+    kv_client: Kv,
+    watch_client: Watch,
     // pub auth_client: AuthClient<Channel>,
     // pub cluster_client: ClusterClient<Channel>,
     // pub kv_client: KvClient<Channel>,
@@ -40,18 +41,18 @@ impl Client {
         let inner = {
             // let auth_client = AuthClient::new(channel.clone());
             let kv_client = Kv::new(KvClient::new(channel.clone()));
+            let watch_client = Watch::new(WatchClient::new(channel.clone()));
             // let cluster_client = ClusterClient::new(channel.clone());
             // let lease_client = LeaseClient::new(channel.clone());
             // let maintenance_client = MaintenanceClient::new(channel.clone());
-            // let watch_client = WatchClient::new(channel.clone());
             Inner {
                 channel,
                 // auth_client,
                 // cluster_client,
                 kv_client,
+                watch_client,
                 // lease_client,
                 // maintenance_client,
-                // watch_client,
             }
         };
 
@@ -62,5 +63,9 @@ impl Client {
 
     pub fn kv(&self) -> Kv {
         self.inner.kv_client.clone()
+    }
+
+    pub fn watch(&self) -> Watch {
+        self.inner.watch_client.clone()
     }
 }

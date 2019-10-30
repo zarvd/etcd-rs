@@ -165,4 +165,12 @@ impl KeyRange {
         };
         Self { key, range_end }
     }
+
+    pub fn take_key(&mut self) -> Vec<u8> {
+        std::mem::take(&mut self.key)
+    }
+
+    pub fn take_range_end(&mut self) -> Vec<u8> {
+        std::mem::take(&mut self.range_end)
+    }
 }

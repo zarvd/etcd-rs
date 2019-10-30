@@ -1,6 +1,7 @@
 #![feature(mem_take)]
 mod client;
 mod kv;
+mod watch;
 
 pub mod proto {
     pub mod mvccpb {
@@ -25,5 +26,6 @@ pub use kv::{
     DeleteRequest, DeleteResponse, KeyRange, KeyValue, Kv, PutRequest, PutResponse, RangeRequest,
     RangeResponse, TxnCmp, TxnRequest, TxnResponse,
 };
+pub use watch::{Watch, WatchRequest, WatchResponse};
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
