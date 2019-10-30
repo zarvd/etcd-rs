@@ -11,7 +11,7 @@ pub use txn::{TxnCmp, TxnRequest, TxnResponse};
 use tonic::transport::Channel;
 
 use crate::proto::etcdserverpb::client::KvClient;
-use crate::proto::{etcdserverpb, mvccpb};
+use crate::proto::mvccpb;
 use crate::Result;
 
 #[derive(Clone)]
@@ -26,13 +26,13 @@ impl Kv {
     }
 
     pub async fn put(&mut self, req: PutRequest) -> Result<PutResponse> {
-        let resp = self.client.put(tonic::Request::new(req.proto)).await?;
+        let resp = self.client.put(tonic::Request::new(req.into())).await?;
 
         Ok(From::from(resp.into_inner()))
     }
 
     pub async fn range(&mut self, req: RangeRequest) -> Result<RangeResponse> {
-        let resp = self.client.range(tonic::Request::new(req.proto)).await?;
+        let resp = self.client.range(tonic::Request::new(req.into())).await?;
 
         Ok(From::from(resp.into_inner()))
     }
@@ -40,8 +40,14 @@ impl Kv {
     pub async fn delete(&mut self, req: DeleteRequest) -> Result<DeleteResponse> {
         let resp = self
             .client
-            .delete_range(tonic::Request::new(req.proto))
+            .delete_range(tonic::Request::new(req.into()))
             .await?;
+
+        Ok(From::from(resp.into_inner()))
+    }
+
+    pub async fn txn(&mut self, req: TxnRequest) -> Result<TxnResponse> {
+        let resp = self.client.txn(tonic::Request::new(req.into())).await?;
 
         Ok(From::from(resp.into_inner()))
     }
@@ -102,5 +108,61 @@ impl KeyValue {
 impl From<mvccpb::KeyValue> for KeyValue {
     fn from(kv: mvccpb::KeyValue) -> Self {
         Self { proto: kv }
+    }
+}
+
+/// KeyRange
+pub struct KeyRange {
+    key: Vec<u8>,
+    range_end: Vec<u8>,
+}
+
+impl KeyRange {
+    pub fn range<K, R>(key: K, range_end: R) -> Self
+    where
+        K: Into<Vec<u8>>,
+        R: Into<Vec<u8>>,
+    {
+        Self {
+            key: key.into(),
+            range_end: range_end.into(),
+        }
+    }
+
+    pub fn key<K>(key: K) -> Self
+    where
+        K: Into<Vec<u8>>,
+    {
+        Self {
+            key: key.into(),
+            range_end: vec![],
+        }
+    }
+
+    pub fn all() -> Self {
+        Self {
+            key: vec![0],
+            range_end: vec![0],
+        }
+    }
+
+    pub fn prefix<K>(prefix: K) -> Self
+    where
+        K: Into<Vec<u8>>,
+    {
+        let key = prefix.into();
+        let range_end = {
+            let mut end = key.clone();
+
+            for i in (0..end.len()).rev() {
+                if end[i] < 0xff {
+                    end[i] += 1;
+                    end = end[0..=i].to_vec();
+                    break;
+                }
+            }
+            end
+        };
+        Self { key, range_end }
     }
 }

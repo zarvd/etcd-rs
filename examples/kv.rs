@@ -16,7 +16,7 @@ async fn list_prefix(client: &Client) -> Result<()> {
 
     {
         // List key-value pairs with prefix
-        let req = RangeRequest::prefix(prefix);
+        let req = RangeRequest::new(KeyRange::prefix(prefix));
         let mut resp = client.kv().range(req).await?;
 
         println!("Range Response: {:?}", resp);
@@ -27,7 +27,7 @@ async fn list_prefix(client: &Client) -> Result<()> {
 
     {
         // Delete key-valeu pairs with prefix
-        let req = DeleteRequest::prefix(prefix);
+        let req = DeleteRequest::new(KeyRange::prefix(prefix));
         let resp = client.kv().delete(req).await?;
         println!("Delete Response: {:?}", resp);
     }
@@ -48,7 +48,7 @@ async fn list_all(client: &Client) -> Result<()> {
     {
         // List all key-value pairs
         let req = {
-            let mut req = RangeRequest::all();
+            let mut req = RangeRequest::new(KeyRange::all());
             req.set_limit(4); // Only returns 4 key-value pairs
             req
         };
@@ -58,7 +58,7 @@ async fn list_all(client: &Client) -> Result<()> {
 
     {
         // Delete all key-valeu pairs
-        let req = DeleteRequest::all();
+        let req = DeleteRequest::new(KeyRange::all());
         let resp = client.kv().delete(req).await?;
         println!("Delete Response: {:?}", resp);
     }
@@ -82,14 +82,14 @@ async fn put_and_get(client: &Client) -> Result<()> {
 
     {
         // Get the key-value pair
-        let req = RangeRequest::key(key);
+        let req = RangeRequest::new(KeyRange::key(key));
         let resp = client.kv().range(req).await?;
         println!("Range Response: {:?}", resp);
     }
 
     {
         // Delete the key-valeu pair
-        let req = DeleteRequest::key(key);
+        let req = DeleteRequest::new(KeyRange::key(key));
         let resp = client.kv().delete(req).await?;
         println!("Delete Response: {:?}", resp);
     }

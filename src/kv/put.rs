@@ -1,7 +1,7 @@
 use crate::proto::etcdserverpb;
 
 pub struct PutRequest {
-    pub(crate) proto: etcdserverpb::PutRequest,
+    proto: etcdserverpb::PutRequest,
 }
 
 impl PutRequest {
@@ -36,6 +36,12 @@ impl PutRequest {
 
     pub fn set_ignore_lease(&mut self, ignore_lease: bool) {
         self.proto.ignore_lease = ignore_lease;
+    }
+}
+
+impl Into<etcdserverpb::PutRequest> for PutRequest {
+    fn into(self) -> etcdserverpb::PutRequest {
+        self.proto
     }
 }
 

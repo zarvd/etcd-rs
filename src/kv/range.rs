@@ -1,16 +1,16 @@
-use super::KeyValue;
+use super::{KeyRange, KeyValue};
 use crate::proto::etcdserverpb;
 
 pub struct RangeRequest {
-    pub(crate) proto: etcdserverpb::RangeRequest,
+    proto: etcdserverpb::RangeRequest,
 }
 
 impl RangeRequest {
-    fn new(key: Vec<u8>, range_end: Vec<u8>) -> Self {
+    pub fn new(key_range: KeyRange) -> Self {
         Self {
             proto: etcdserverpb::RangeRequest {
-                key: key,
-                range_end: range_end,
+                key: key_range.key,
+                range_end: key_range.range_end,
                 limit: 0,
                 revision: 0,
                 sort_order: 0,
@@ -26,48 +26,14 @@ impl RangeRequest {
         }
     }
 
-    pub fn all() -> Self {
-        Self::new(vec![0], vec![0])
-    }
-
-    pub fn key<K>(key: K) -> Self
-    where
-        K: Into<Vec<u8>>,
-    {
-        Self::new(key.into(), vec![])
-    }
-
-    pub fn prefix<K>(prefix: K) -> Self
-    where
-        K: Into<Vec<u8>>,
-    {
-        let key = prefix.into();
-        let range_end = {
-            let mut end = key.clone();
-
-            for i in (0..end.len()).rev() {
-                if end[i] < 0xff {
-                    end[i] += 1;
-                    end = end[0..=i].to_vec();
-                    break;
-                }
-            }
-            end
-        };
-
-        Self::new(key, range_end)
-    }
-
-    pub fn range<K, V>(key: K, range_end: V) -> Self
-    where
-        K: Into<Vec<u8>>,
-        V: Into<Vec<u8>>,
-    {
-        Self::new(key.into(), range_end.into())
-    }
-
     pub fn set_limit(&mut self, limit: usize) {
         self.proto.limit = limit as i64;
+    }
+}
+
+impl Into<etcdserverpb::RangeRequest> for RangeRequest {
+    fn into(self) -> etcdserverpb::RangeRequest {
+        self.proto
     }
 }
 

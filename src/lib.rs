@@ -1,3 +1,4 @@
+#![feature(mem_take)]
 mod client;
 mod kv;
 
@@ -21,7 +22,7 @@ pub mod proto {
 
 pub use client::{Client, ClientConfig};
 pub use kv::{
-    DeleteRequest, DeleteResponse, KeyValue, Kv, PutRequest, PutResponse, RangeRequest,
+    DeleteRequest, DeleteResponse, KeyRange, KeyValue, Kv, PutRequest, PutResponse, RangeRequest,
     RangeResponse, TxnCmp, TxnRequest, TxnResponse,
 };
 

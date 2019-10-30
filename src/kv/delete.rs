@@ -1,54 +1,29 @@
-use super::KeyValue;
+use super::{KeyValue, KeyRange};
 use crate::proto::etcdserverpb;
 
 pub struct DeleteRequest {
-    pub(crate) proto: etcdserverpb::DeleteRangeRequest,
+    proto: etcdserverpb::DeleteRangeRequest,
 }
 
 impl DeleteRequest {
-    fn new(key: Vec<u8>, range_end: Vec<u8>) -> Self {
+    pub fn new(key_range: KeyRange) -> Self {
         Self {
             proto: etcdserverpb::DeleteRangeRequest {
-                key,
-                range_end,
+                key: key_range.key,
+                range_end: key_range.range_end,
                 prev_kv: false,
             },
         }
     }
 
-    pub fn key<K>(key: K) -> Self
-    where
-        K: Into<Vec<u8>>,
-    {
-        Self::new(key.into(), vec![])
-    }
-
-    pub fn prefix<K>(prefix: K) -> Self
-    where
-        K: Into<Vec<u8>>,
-    {
-        let key = prefix.into();
-        let range_end = {
-            let mut end = key.clone();
-
-            for i in (0..end.len()).rev() {
-                if end[i] < 0xff {
-                    end[i] += 1;
-                    end = end[0..=i].to_vec();
-                    break;
-                }
-            }
-            end
-        };
-        Self::new(key, range_end)
-    }
-
-    pub fn all() -> Self {
-        Self::new(vec![0], vec![0])
-    }
-
     pub fn set_prev_kv(&mut self, prev_kv: bool) {
         self.proto.prev_kv = prev_kv;
+    }
+}
+
+impl Into<etcdserverpb::DeleteRangeRequest> for DeleteRequest {
+    fn into(self) -> etcdserverpb::DeleteRangeRequest {
+        self.proto
     }
 }
 
