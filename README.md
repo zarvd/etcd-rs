@@ -15,7 +15,7 @@ Etcd for Rust
 [travis-badge]: https://travis-ci.org/ccc13/etcd-rs.svg?branch=2.0-draft
 [travis-url]: https://travis-ci.org/ccc13/etcd-rs
 
-**NOTE**Version [2.0](https://github.com/ccc13/etcd-rs/tree/2.0-draft) is currently under development. Use the [v1.x](https://github.com/ccc13/etcd-rs) for stable releases.
+**NOTE**: Version [2.0](https://github.com/ccc13/etcd-rs/tree/2.0-draft) is currently under development. Use the [v1.x](https://github.com/ccc13/etcd-rs) for stable releases.
 
 Features
 ----
