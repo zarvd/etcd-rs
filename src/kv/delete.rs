@@ -38,7 +38,7 @@ impl DeleteResponse {
     }
 
     pub fn take_prev_kvs(&mut self) -> Vec<KeyValue> {
-        let kvs = std::mem::take(&mut self.proto.prev_kvs);
+        let kvs = std::mem::replace(&mut self.proto.prev_kvs, vec![]);
 
         kvs.into_iter().map(From::from).collect()
     }

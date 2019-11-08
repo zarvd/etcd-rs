@@ -1,4 +1,3 @@
-#![feature(mem_take)]
 mod client;
 mod kv;
 mod watch;

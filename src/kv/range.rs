@@ -44,7 +44,7 @@ pub struct RangeResponse {
 
 impl RangeResponse {
     pub fn take_kvs(&mut self) -> Vec<KeyValue> {
-        let kvs = std::mem::take(&mut self.proto.kvs);
+        let kvs = std::mem::replace(&mut self.proto.kvs, vec![]);
 
         kvs.into_iter().map(From::from).collect()
     }

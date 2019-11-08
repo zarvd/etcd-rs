@@ -65,7 +65,7 @@ impl KeyValue {
     }
 
     pub fn take_key(&mut self) -> Vec<u8> {
-        std::mem::take(&mut self.proto.key)
+        std::mem::replace(&mut self.proto.key, vec![])
     }
 
     pub fn key_str(&self) -> &str {
@@ -77,7 +77,7 @@ impl KeyValue {
     }
 
     pub fn take_value(&mut self) -> Vec<u8> {
-        std::mem::take(&mut self.proto.value)
+        std::mem::replace(&mut self.proto.value, vec![])
     }
 
     pub fn value_str(&self) -> &str {
@@ -167,10 +167,10 @@ impl KeyRange {
     }
 
     pub fn take_key(&mut self) -> Vec<u8> {
-        std::mem::take(&mut self.key)
+        std::mem::replace(&mut self.key, vec![])
     }
 
     pub fn take_range_end(&mut self) -> Vec<u8> {
-        std::mem::take(&mut self.range_end)
+        std::mem::replace(&mut self.range_end, vec![])
     }
 }
