@@ -1,4 +1,4 @@
-use super::{KeyValue, KeyRange};
+use super::{KeyRange, KeyValue};
 use crate::proto::etcdserverpb;
 
 pub struct DeleteRequest {
