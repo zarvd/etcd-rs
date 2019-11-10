@@ -1,5 +1,6 @@
 mod client;
 mod kv;
+mod lease;
 mod watch;
 
 pub mod proto {
@@ -24,6 +25,10 @@ pub use client::{Client, ClientConfig};
 pub use kv::{
     DeleteRequest, DeleteResponse, KeyRange, KeyValue, Kv, PutRequest, PutResponse, RangeRequest,
     RangeResponse, TxnCmp, TxnRequest, TxnResponse,
+};
+pub use lease::{
+    Lease, LeaseGrantRequest, LeaseGrantResponse, LeaseKeepAliveRequest, LeaseKeepAliveResponse,
+    LeaseRevokeRequest, LeaseRevokeResponse,
 };
 pub use watch::{Watch, WatchRequest, WatchResponse};
 

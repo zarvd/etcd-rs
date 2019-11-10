@@ -11,7 +11,7 @@ use crate::proto::etcdserverpb;
 use crate::proto::etcdserverpb::client::WatchClient;
 
 /// WatchTunnel is a reusable connection for `Watch` operation
-/// underlying gRPC method is Bi-directional streaming
+/// The underlying gRPC method is Bi-directional streaming
 struct WatchTunnel {
     req_sender: UnboundedSender<WatchRequest>,
     resp_receiver: Option<UnboundedReceiver<Result<WatchResponse, tonic::Status>>>,
@@ -32,22 +32,19 @@ impl WatchTunnel {
 
         // monitor inbound watch response and transfer to the receiver
         tokio::spawn(async move {
-            let mut inbound = client.watch(request).await.expect("fuck 1").into_inner();
+            let mut inbound = client.watch(request).await.unwrap().into_inner();
 
             loop {
                 let resp = inbound.message().await;
                 match resp {
                     Ok(Some(resp)) => {
-                        resp_sender
-                            .send(Ok(From::from(resp)))
-                            .await
-                            .expect("fuck 2");
+                        resp_sender.send(Ok(From::from(resp))).await.unwrap();
                     }
                     Ok(None) => {
                         return;
                     }
                     Err(e) => {
-                        resp_sender.send(Err(e)).await.expect("fuck 3");
+                        resp_sender.send(Err(e)).await.unwrap();
                     }
                 };
             }
@@ -80,18 +77,18 @@ impl Watch {
     }
 
     /// Fetch response stream
-    pub fn response(&mut self) -> impl Stream<Item = Result<WatchResponse, tonic::Status>> {
-        self.tunnel.write().expect("fuck").take_resp_receiver()
+    pub fn responses(&mut self) -> impl Stream<Item = Result<WatchResponse, tonic::Status>> {
+        self.tunnel.write().unwrap().take_resp_receiver()
     }
 
     /// Emit request
     pub async fn watch(&mut self, req: WatchRequest) {
         self.tunnel
             .write()
-            .expect("fuck")
+            .unwrap()
             .req_sender
             .send(req)
             .await
-            .expect("fuck");
+            .unwrap();
     }
 }

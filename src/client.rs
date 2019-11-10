@@ -4,7 +4,7 @@ use tonic::transport::Channel;
 use crate::proto::etcdserverpb::client::{
     AuthClient, ClusterClient, KvClient, LeaseClient, MaintenanceClient, WatchClient,
 };
-use crate::{Kv, Watch};
+use crate::{Kv, Lease, Watch};
 
 pub struct ClientConfig {
     pub endpoints: Vec<String>,
@@ -20,10 +20,10 @@ pub struct Inner {
     channel: Channel,
     kv_client: Kv,
     watch_client: Watch,
+    lease_client: Lease,
     // pub auth_client: AuthClient<Channel>,
     // pub cluster_client: ClusterClient<Channel>,
     // pub kv_client: KvClient<Channel>,
-    // pub lease_client: LeaseClient<Channel>,
     // pub maintenance_client: MaintenanceClient<Channel>,
     // pub watch_client: WatchClient<Channel>,
 }
@@ -43,7 +43,7 @@ impl Client {
             let kv_client = Kv::new(KvClient::new(channel.clone()));
             let watch_client = Watch::new(WatchClient::new(channel.clone()));
             // let cluster_client = ClusterClient::new(channel.clone());
-            // let lease_client = LeaseClient::new(channel.clone());
+            let lease_client = Lease::new(LeaseClient::new(channel.clone()));
             // let maintenance_client = MaintenanceClient::new(channel.clone());
             Inner {
                 channel,
@@ -51,7 +51,7 @@ impl Client {
                 // cluster_client,
                 kv_client,
                 watch_client,
-                // lease_client,
+                lease_client,
                 // maintenance_client,
             }
         };
@@ -67,5 +67,9 @@ impl Client {
 
     pub fn watch(&self) -> Watch {
         self.inner.watch_client.clone()
+    }
+
+    pub fn lease(&self) -> Lease {
+        self.inner.lease_client.clone()
     }
 }

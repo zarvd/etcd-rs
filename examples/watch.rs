@@ -7,7 +7,7 @@ async fn watch(client: &Client) -> Result<()> {
 
     {
         // print out all received watch responses
-        let mut inbound = client.watch().response();
+        let mut inbound = client.watch().responses();
         tokio::spawn(async move {
             loop {
                 let resp = inbound.next().await.unwrap();

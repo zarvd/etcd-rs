@@ -22,8 +22,8 @@ impl PutRequest {
         }
     }
 
-    pub fn set_lease(&mut self, lease: i64) {
-        self.proto.lease = lease;
+    pub fn set_lease(&mut self, lease: u64) {
+        self.proto.lease = lease as i64;
     }
 
     pub fn set_prev_kv(&mut self, prev_kv: bool) {
