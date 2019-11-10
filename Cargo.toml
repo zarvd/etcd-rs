@@ -14,13 +14,14 @@ license = "MIT"
 all-features = true
 
 [dependencies]
-tonic = { version = "0.1.0-alpha.5" }
+tonic = { version = "=0.1.0-alpha.4" }
 bytes = "0.4"
 prost = "0.5"
 prost-derive = "0.5"
+tokio = "0.2.0-alpha.6"
+async-stream = "0.1.2"
 
 [dev-dependencies]
-tokio = "0.2.0-alpha.5"
 
 [build-dependencies]
-tonic-build = "0.1.0-alpha.5"
+tonic-build = "=0.1.0-alpha.4"

@@ -7,6 +7,7 @@ pub struct WatchRequest {
 }
 
 impl WatchRequest {
+    /// Create constructs a `Watch Create Request`
     pub fn create(mut key_range: KeyRange) -> Self {
         Self {
             proto: etcdserverpb::WatchRequest {
@@ -24,6 +25,7 @@ impl WatchRequest {
         }
     }
 
+    /// Cancel constructs a `Watch Cancel Request` by watch id
     pub fn cancel(watch_id: usize) -> Self {
         Self {
             proto: etcdserverpb::WatchRequest {
@@ -67,6 +69,7 @@ impl Into<etcdserverpb::WatchRequest> for WatchRequest {
     }
 }
 
+#[derive(Debug)]
 pub struct WatchResponse {
     proto: etcdserverpb::WatchResponse,
 }
