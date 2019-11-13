@@ -12,10 +12,10 @@ Etcd for Rust
 [docs-url]: https://docs.rs/etcd-rs
 [mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
 [mit-url]: LICENSE-MIT
-[travis-badge]: https://travis-ci.org/ccc13/etcd-rs.svg?branch=2.0-draft
+[travis-badge]: https://travis-ci.org/ccc13/etcd-rs.svg?branch=master
 [travis-url]: https://travis-ci.org/ccc13/etcd-rs
 
-**NOTE**: Version [2.0](https://github.com/ccc13/etcd-rs/tree/2.0-draft) is currently under development. Use the [v1.x](https://github.com/ccc13/etcd-rs) for stable releases.
+**NOTE**: Branch [master](https://github.com/ccc13/etcd-rs/tree/master) is currently under development. For v0.1.x based releases please check out the [v0.1.x](https://github.com/ccc13/etcd-rs/tree/v0.1.x) branch.
 
 Features
 ----
