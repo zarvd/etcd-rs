@@ -1,4 +1,5 @@
 use crate::proto::etcdserverpb;
+use crate::ResponseHeader;
 
 /// Request for refreshing lease.
 pub struct LeaseKeepAliveRequest {
@@ -26,7 +27,15 @@ pub struct LeaseKeepAliveResponse {
 }
 
 impl LeaseKeepAliveResponse {
-    /// Get the refreshed lease ID.
+    /// Takes the header out of response, leaving a `None` in its place.
+    pub fn take_header(&mut self) -> Option<ResponseHeader> {
+        match self.proto.header.take() {
+            Some(header) => Some(From::from(header)),
+            _ => None,
+        }
+    }
+
+    /// Gets the lease ID for the refreshed lease.
     pub fn id(&self) -> u64 {
         self.proto.id as u64
     }

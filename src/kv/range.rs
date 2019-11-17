@@ -1,5 +1,6 @@
 use super::{KeyRange, KeyValue};
 use crate::proto::etcdserverpb;
+use crate::ResponseHeader;
 
 /// Request for fetching key-value pairs.
 pub struct RangeRequest {
@@ -28,7 +29,7 @@ impl RangeRequest {
         }
     }
 
-    /// Set the maximum number of keys returned for the request.
+    /// Sets the maximum number of keys returned for the request.
     /// When limit is set to 0, it is treated as no limit.
     pub fn set_limit(&mut self, limit: usize) {
         self.proto.limit = limit as i64;
@@ -48,16 +49,27 @@ pub struct RangeResponse {
 }
 
 impl RangeResponse {
+    /// Takes the header out of response, leaving a `None` in its place.
+    pub fn take_header(&mut self) -> Option<ResponseHeader> {
+        match self.proto.header.take() {
+            Some(header) => Some(From::from(header)),
+            _ => None,
+        }
+    }
+
+    /// Takes the key-value pairs out of response, leaving an empty vector in its place.
     pub fn take_kvs(&mut self) -> Vec<KeyValue> {
         let kvs = std::mem::replace(&mut self.proto.kvs, vec![]);
 
         kvs.into_iter().map(From::from).collect()
     }
 
+    /// Returns `true` if there are more keys to return in the requested range, and `false` otherwise.
     pub fn has_more(&self) -> bool {
         self.proto.more
     }
 
+    /// Returns the number of keys within the range when requested.
     pub fn count(&self) -> usize {
         self.proto.count as usize
     }

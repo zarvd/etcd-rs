@@ -64,46 +64,59 @@ pub struct KeyValue {
 }
 
 impl KeyValue {
+    /// Gets the key in bytes. An empty key is not allowed.
     pub fn key(&self) -> &[u8] {
         &self.proto.key
     }
 
+    /// Takes the key out of response, leaving an empty vector in its place.
     pub fn take_key(&mut self) -> Vec<u8> {
         std::mem::replace(&mut self.proto.key, vec![])
     }
 
+    /// Converts the key from bytes `&[u8]` to `&str`.
+    /// Leaves the original `&[u8]` in place, and creates a new string slice containing the entire content.
     pub fn key_str(&self) -> &str {
         std::str::from_utf8(&self.proto.key).expect("convert bytes to string")
     }
 
+    /// Gets the value held by the key, in bytes.
     pub fn value(&self) -> &[u8] {
         &self.proto.value
     }
 
+    /// Takes the value out of response, leaving an empty vector in its place.
     pub fn take_value(&mut self) -> Vec<u8> {
         std::mem::replace(&mut self.proto.value, vec![])
     }
 
+    /// Converts the value from bytes `&[u8]` to `&str`.
+    /// Leaves the original `&[u8]` in place, and creates a new string slice containing the entire content.
     pub fn value_str(&self) -> &str {
         std::str::from_utf8(&self.proto.value).expect("convert bytes to string")
     }
 
+    /// Gets the revision of last creation on this key.
     pub fn create_revision(&self) -> usize {
         self.proto.create_revision as usize
     }
 
+    /// Gets the revision of last modification on this key.
     pub fn mod_revision(&self) -> usize {
         self.proto.mod_revision as usize
     }
 
+    /// Gets the version of the key.
     pub fn version(&self) -> usize {
         self.proto.version as usize
     }
 
+    /// Gets the ID of the lease that attached to key.
     pub fn lease(&self) -> usize {
         self.proto.lease as usize
     }
 
+    /// Returns `true` if this KeyValue has a lease attached, and `false` otherwise.
     pub fn has_lease(&self) -> bool {
         self.proto.lease != 0
     }

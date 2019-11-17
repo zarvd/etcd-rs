@@ -54,6 +54,8 @@ use tonic::transport::Channel;
 
 use crate::proto::etcdserverpb;
 use crate::proto::etcdserverpb::client::WatchClient;
+use crate::proto::mvccpb;
+use crate::KeyValue;
 
 /// WatchTunnel is a reusable connection for `Watch` operation
 /// The underlying gRPC method is Bi-directional streaming
@@ -136,5 +138,50 @@ impl Watch {
             .send(req)
             .await
             .unwrap();
+    }
+}
+
+/// The kind of event.
+pub enum EventType {
+    Put,
+    Delete,
+}
+
+impl From<mvccpb::event::EventType> for EventType {
+    fn from(event_type: mvccpb::event::EventType) -> Self {
+        use mvccpb::event::EventType;
+        match event_type {
+            EventType::Put => Self::Put,
+            EventType::Delete => Self::Delete,
+        }
+    }
+}
+
+/// Every change to every key is represented with Event messages.
+pub struct Event {
+    proto: mvccpb::Event,
+}
+
+impl Event {
+    /// Gets the kind of event.
+    pub fn event_type(&self) -> EventType {
+        match self.proto.r#type {
+            0 => EventType::Put,
+            _ => EventType::Delete, // FIXME: assert valid event type
+        }
+    }
+
+    /// Takes the key-value pair out of response, leaving a `None` in its place.
+    pub fn take_kvs(&mut self) -> Option<KeyValue> {
+        match self.proto.kv.take() {
+            Some(kv) => Some(From::from(kv)),
+            _ => None,
+        }
+    }
+}
+
+impl From<mvccpb::Event> for Event {
+    fn from(event: mvccpb::Event) -> Self {
+        Self { proto: event }
     }
 }

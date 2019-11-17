@@ -1,6 +1,8 @@
 use crate::proto::etcdserverpb;
+use crate::KeyValue;
+use crate::ResponseHeader;
 
-/// Request for putting key value.
+/// Request for putting key-value.
 pub struct PutRequest {
     proto: etcdserverpb::PutRequest,
 }
@@ -24,24 +26,22 @@ impl PutRequest {
         }
     }
 
-    /// Set custome lease.
+    /// Sets the lease ID to associate with the key in the key-value store.
+    /// A lease value of 0 indicates no lease.
     pub fn set_lease(&mut self, lease: u64) {
         self.proto.lease = lease as i64;
     }
 
-    /// Set previous key-value.
     /// When set, responds with the key-value pair data before the update from this Put request.
     pub fn set_prev_kv(&mut self, prev_kv: bool) {
         self.proto.prev_kv = prev_kv;
     }
 
-    /// Set ignore value.
     /// When set, update the key without changing its current value. Returns an error if the key does not exist.
     pub fn set_ignore_value(&mut self, ignore_value: bool) {
         self.proto.ignore_value = ignore_value;
     }
 
-    /// Set ignore lease.
     /// When set, update the key without changing its current lease. Returns an error if the key does not exist.
     pub fn set_ignore_lease(&mut self, ignore_lease: bool) {
         self.proto.ignore_lease = ignore_lease;
@@ -54,9 +54,28 @@ impl Into<etcdserverpb::PutRequest> for PutRequest {
     }
 }
 
+/// Response for putting key-value.
 #[derive(Debug)]
 pub struct PutResponse {
     proto: etcdserverpb::PutResponse,
+}
+
+impl PutResponse {
+    /// Takes the header out of response, leaving a `None` in its place.
+    pub fn take_header(&mut self) -> Option<ResponseHeader> {
+        match self.proto.header.take() {
+            Some(header) => Some(From::from(header)),
+            _ => None,
+        }
+    }
+
+    /// Takes the previous key-value pair out of response, leaving a `None` in its place.
+    pub fn take_prev_kv(&mut self) -> Option<KeyValue> {
+        match self.proto.prev_kv.take() {
+            Some(kv) => Some(From::from(kv)),
+            _ => None,
+        }
+    }
 }
 
 impl From<etcdserverpb::PutResponse> for PutResponse {

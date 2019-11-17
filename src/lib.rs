@@ -45,6 +45,7 @@
 mod client;
 mod kv;
 mod lease;
+mod response_header;
 mod watch;
 
 pub(crate) mod proto {
@@ -74,6 +75,7 @@ pub use lease::{
     Lease, LeaseGrantRequest, LeaseGrantResponse, LeaseKeepAliveRequest, LeaseKeepAliveResponse,
     LeaseRevokeRequest, LeaseRevokeResponse,
 };
-pub use watch::{Watch, WatchRequest, WatchResponse};
+pub use response_header::ResponseHeader;
+pub use watch::{Event, EventType, Watch, WatchRequest, WatchResponse};
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;

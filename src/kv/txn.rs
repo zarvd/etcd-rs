@@ -1,5 +1,8 @@
-use super::{DeleteRequest, KeyRange, PutRequest, RangeRequest};
+use super::{
+    DeleteRequest, DeleteResponse, KeyRange, PutRequest, PutResponse, RangeRequest, RangeResponse,
+};
 use crate::proto::etcdserverpb;
+use crate::ResponseHeader;
 use etcdserverpb::compare::{CompareResult, CompareTarget, TargetUnion};
 use etcdserverpb::Compare;
 
@@ -20,7 +23,7 @@ impl TxnRequest {
         }
     }
 
-    /// Add a version compare.
+    /// Adds a version compare.
     pub fn when_version(mut self, key_range: KeyRange, cmp: TxnCmp, version: usize) -> Self {
         let result: CompareResult = cmp.into();
         self.proto.compare.push(Compare {
@@ -33,7 +36,7 @@ impl TxnRequest {
         self
     }
 
-    /// Add a create revision compare.
+    /// Adds a create revision compare.
     pub fn when_create_revision(
         mut self,
         key_range: KeyRange,
@@ -51,7 +54,7 @@ impl TxnRequest {
         self
     }
 
-    /// Add a mod revision compare.
+    /// Adds a mod revision compare.
     pub fn when_mod_revision(mut self, key_range: KeyRange, cmp: TxnCmp, revision: usize) -> Self {
         let result: CompareResult = cmp.into();
         self.proto.compare.push(Compare {
@@ -64,7 +67,7 @@ impl TxnRequest {
         self
     }
 
-    /// Add a value compare.
+    /// Adds a value compare.
     pub fn when_value<V>(mut self, key_range: KeyRange, cmp: TxnCmp, value: V) -> Self
     where
         V: Into<Vec<u8>>,
@@ -171,9 +174,52 @@ impl Into<CompareResult> for TxnCmp {
     }
 }
 
+/// Response transaction operation.
+pub enum TxnOpResponse {
+    Range(RangeResponse),
+    Put(PutResponse),
+    Delete(DeleteResponse),
+    Txn(TxnResponse),
+}
+
+impl From<etcdserverpb::ResponseOp> for TxnOpResponse {
+    fn from(mut resp: etcdserverpb::ResponseOp) -> Self {
+        use etcdserverpb::response_op::Response;
+        match resp.response.take().unwrap() {
+            Response::ResponseRange(r) => Self::Range(From::from(r)),
+            Response::ResponsePut(r) => Self::Put(From::from(r)),
+            Response::ResponseTxn(r) => Self::Txn(From::from(r)),
+            Response::ResponseDeleteRange(r) => Self::Delete(From::from(r)),
+        }
+    }
+}
+
+/// Response for transaction.
 #[derive(Debug)]
 pub struct TxnResponse {
     proto: etcdserverpb::TxnResponse,
+}
+
+impl TxnResponse {
+    /// Takes the header out of response, leaving a `None` in its place.
+    pub fn take_header(&mut self) -> Option<ResponseHeader> {
+        match self.proto.header.take() {
+            Some(header) => Some(From::from(header)),
+            _ => None,
+        }
+    }
+
+    /// Returns `true` if the compare evaluated to true, and `false` otherwise.
+    pub fn is_success(&self) -> bool {
+        self.proto.succeeded
+    }
+
+    /// Takes the responses corresponding to the results from applying the Success block if succeeded is true or the Failure if succeeded is false.
+    pub fn take_reponses(&mut self) -> Vec<TxnOpResponse> {
+        let responses = std::mem::replace(&mut self.proto.responses, vec![]);
+
+        responses.into_iter().map(From::from).collect()
+    }
 }
 
 impl From<etcdserverpb::TxnResponse> for TxnResponse {

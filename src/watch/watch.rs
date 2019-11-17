@@ -1,6 +1,8 @@
 use crate::proto::etcdserverpb;
 use crate::proto::etcdserverpb::watch_request::RequestUnion;
+use crate::Event;
 use crate::KeyRange;
+use crate::ResponseHeader;
 
 /// Request for creating or canceling watch.
 pub struct WatchRequest {
@@ -39,7 +41,7 @@ impl WatchRequest {
         }
     }
 
-    /// Set start revision.
+    /// Sets the revision to watch from (inclusive). No start_revision is "now".
     /// It only effects when the request is for subscribing.
     pub fn set_start_revision(&mut self, revision: usize) {
         // TODO log warning if not CreateRequest
@@ -49,7 +51,7 @@ impl WatchRequest {
         }
     }
 
-    /// Set progress notify.
+    /// Sets progress notify.
     /// It only effects when the request is for subscribing.
     pub fn set_progress_notify(&mut self, progress_notify: bool) {
         // TODO log warning if not CreateRequest
@@ -59,7 +61,7 @@ impl WatchRequest {
         }
     }
 
-    /// Set previous key value.
+    /// Sets previous key value.
     /// It only effects when the request is for subscribing.
     pub fn set_prev_kv(&mut self, prev_kv: bool) {
         // TODO log warning if not CreateRequest
@@ -81,7 +83,27 @@ pub struct WatchResponse {
     proto: etcdserverpb::WatchResponse,
 }
 
-impl WatchResponse {}
+impl WatchResponse {
+    /// Takes the header out of response, leaving a `None` in its place.
+    pub fn take_header(&mut self) -> Option<ResponseHeader> {
+        match self.proto.header.take() {
+            Some(header) => Some(From::from(header)),
+            _ => None,
+        }
+    }
+
+    /// Gets the ID of the watcher that corresponds to the response.
+    pub fn watch_id(&self) -> u64 {
+        self.proto.watch_id as u64
+    }
+
+    /// Takes the events out of response, leaving an empty vector in its place.
+    pub fn take_events(&mut self) -> Vec<Event> {
+        let events = std::mem::replace(&mut self.proto.events, Default::default());
+
+        events.into_iter().map(From::from).collect()
+    }
+}
 
 impl From<etcdserverpb::WatchResponse> for WatchResponse {
     fn from(resp: etcdserverpb::WatchResponse) -> Self {
