@@ -4,7 +4,7 @@
 //!
 //! Grant lease and keep lease alive
 //!
-//! ```
+//! ```no_run
 //! use std::time::Duration;
 //!
 //! use tokio::prelude::*;

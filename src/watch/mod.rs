@@ -4,8 +4,7 @@
 //!
 //! Watch key `foo` changes
 //!
-//! ```
-//!
+//! ```no_run
 //! use tokio::prelude::*;
 //!
 //! use etcd_rs::*;
