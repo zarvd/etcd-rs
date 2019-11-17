@@ -1,3 +1,62 @@
+//! Leases are a mechanism for detecting client liveness. The cluster grants leases with a time-to-live. A lease expires if the etcd cluster does not receive a keepAlive within a given TTL period.
+//!
+//! # Examples
+//!
+//! Grant lease and keep lease alive
+//!
+//! use std::time::Duration;
+//!
+//! use tokio::prelude::*;
+//!
+//! use etcd_rs::*;
+//!
+//! #[tokio::main]
+//! async fn main() -> Result<()> {
+//!     let client = Client::new(ClientConfig {
+//!         endpoints: vec!["http://127.0.0.1:2379".to_owned()],
+//!         auth: None,
+//!     });
+//!
+//!     let key = "foo";
+//!
+//!     // grant lease
+//!     let lease = client
+//!         .lease()
+//!         .grant(LeaseGrantRequest::new(Duration::from_secs(3)))
+//!         .await?;
+//!
+//!     let lease_id = lease.id();
+//!
+//!     // set key with lease
+//!     client
+//!         .kv()
+//!         .put({
+//!             let mut req = PutRequest::new(key, "bar");
+//!             req.set_lease(lease_id);
+//!
+//!             req
+//!         })
+//!         .await?;
+//!
+//!     {
+//!         // keep alive the lease every 1 second
+//!         let client = client.clone();
+//!
+//!         use tokio::timer::Interval;
+//!         let mut interval = Interval::new_interval(Duration::from_secs(1));
+//!
+//!         loop {
+//!             interval.next().await;
+//!             client
+//!                 .lease()
+//!                 .keep_alive(LeaseKeepAliveRequest::new(lease_id))
+//!                 .await;
+//!         }
+//!     }
+//!
+//!     Ok(())
+//! }
+
 mod grant;
 mod keep_alive;
 mod revoke;
@@ -87,6 +146,7 @@ impl Lease {
         }
     }
 
+    /// Grant a new lease.
     pub async fn grant(&mut self, req: LeaseGrantRequest) -> Result<LeaseGrantResponse> {
         let resp = self
             .client
@@ -96,6 +156,7 @@ impl Lease {
         Ok(From::from(resp.into_inner()))
     }
 
+    /// Revoke the granted lease.
     pub async fn revoke(&mut self, req: LeaseRevokeRequest) -> Result<LeaseRevokeResponse> {
         let resp = self
             .client
@@ -105,13 +166,14 @@ impl Lease {
         Ok(From::from(resp.into_inner()))
     }
 
-    /// Fetch keep alive response stream
+    /// Fetch keep alive response stream.
     pub fn keep_alive_responses(
         &mut self,
     ) -> impl Stream<Item = std::result::Result<LeaseKeepAliveResponse, tonic::Status>> {
         self.keep_alive_tunnel.write().unwrap().take_resp_receiver()
     }
 
+    /// Keep the granted lease alive.
     pub async fn keep_alive(&mut self, req: LeaseKeepAliveRequest) {
         self.keep_alive_tunnel
             .write()

@@ -1,3 +1,49 @@
+//! The Watch API provides an event-based interface for asynchronously monitoring changes to keys.
+//!
+//! # Examples
+//!
+//! Watch key `foo` changes
+//!
+//! ```
+//!
+//! use tokio::prelude::*;
+//!
+//! use etcd_rs::*;
+//!
+//! #[tokio::main]
+//! async fn main() -> Result<()> {
+//!     let client = Client::new(ClientConfig {
+//!         endpoints: vec!["http://127.0.0.1:2379".to_owned()],
+//!         auth: None,
+//!     });
+//!
+//!     // print out all received watch responses
+//!     let mut inbound = client.watch().responses();
+//!     tokio::spawn(async move {
+//!         loop {
+//!             let resp = inbound.next().await.unwrap();
+//!             println!("watch response: {:?}", resp);
+//!         }
+//!     });
+//!
+//!     client
+//!         .watch()
+//!         .watch(WatchRequest::create(KeyRange::key("foo")))
+//!         .await;
+//!
+//!     let key = "foo";
+//!     client.kv().put(PutRequest::new(key, "bar")).await?;
+//!     client.kv().put(PutRequest::new(key, "baz")).await?;
+//!     client
+//!         .kv()
+//!         .delete(DeleteRequest::new(KeyRange::key(key)))
+//!         .await?;
+//!
+//!     Ok(())
+//! }
+//!
+//! ```
+
 mod watch;
 pub use watch::{WatchRequest, WatchResponse};
 
