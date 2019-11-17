@@ -4,6 +4,7 @@
 //!
 //! Grant lease and keep lease alive
 //!
+//! ```
 //! use std::time::Duration;
 //!
 //! use tokio::prelude::*;
@@ -56,6 +57,7 @@
 //!
 //!     Ok(())
 //! }
+//! ```
 
 mod grant;
 mod keep_alive;
