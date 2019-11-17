@@ -1,6 +1,6 @@
 [package]
 name = "etcd-rs"
-version = "0.2.0-alpha.2"
+version = "0.2.0-alpha.3"
 authors = ["ccc13 <currantxx@gmail.com>"]
 edition = "2018"
 keywords = ["etcd", "future"]
