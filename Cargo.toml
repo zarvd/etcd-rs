@@ -10,11 +10,8 @@ description = "etcd client for rust"
 documentation = "https://docs.rs/etcd-rs"
 license = "MIT"
 
-[package.metadata.docs.rs]
-all-features = true
-
 [dependencies]
-tonic = { version = "=0.1.0-alpha.6" }
+tonic = "0.1.0-alpha.6" 
 bytes = "0.4"
 prost = "0.5"
 prost-derive = "0.5"
@@ -23,5 +20,7 @@ async-stream = "0.1.2"
 
 [dev-dependencies]
 
-[build-dependencies]
-tonic-build = "=0.1.0-alpha.6"
+[build-dependencies.tonic-build]
+version = "0.1.0-alpha.6"
+default-features = false
+features = ["transport"]
