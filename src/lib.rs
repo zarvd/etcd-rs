@@ -6,7 +6,7 @@
 //!
 //! A simple key-value read and write operation:
 //!
-//! ```
+//! ```no_run
 //! use etcd_rs::*;
 //!
 //! #[tokio::main]
