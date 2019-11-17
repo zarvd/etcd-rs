@@ -1,10 +1,12 @@
 use crate::proto::etcdserverpb;
 
+/// Request for revoking lease.
 pub struct LeaseRevokeRequest {
     proto: etcdserverpb::LeaseRevokeRequest,
 }
 
 impl LeaseRevokeRequest {
+    /// Creates a new LeaseRevokeRequest which will revoke the specified lease.
     pub fn new(id: u64) -> Self {
         let proto = etcdserverpb::LeaseRevokeRequest { id: id as i64 };
 

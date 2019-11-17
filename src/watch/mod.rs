@@ -109,6 +109,7 @@ impl WatchTunnel {
     }
 }
 
+/// Watch client.
 #[derive(Clone)]
 pub struct Watch {
     client: WatchClient<Channel>,
@@ -122,12 +123,12 @@ impl Watch {
         Self { client, tunnel }
     }
 
-    /// Fetch response stream
+    /// Fetch response stream.
     pub fn responses(&mut self) -> impl Stream<Item = Result<WatchResponse, tonic::Status>> {
         self.tunnel.write().unwrap().take_resp_receiver()
     }
 
-    /// Emit request
+    /// Performs a watch operation.
     pub async fn watch(&mut self, req: WatchRequest) {
         self.tunnel
             .write()

@@ -1,4 +1,4 @@
-Etcd for Rust
+etcd for Rust
 ====
 
 [![Crates.io][crates-badge]][crates-url]

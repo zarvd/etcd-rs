@@ -2,12 +2,13 @@ use crate::proto::etcdserverpb;
 use crate::proto::etcdserverpb::watch_request::RequestUnion;
 use crate::KeyRange;
 
+/// Request for creating or canceling watch.
 pub struct WatchRequest {
     proto: etcdserverpb::WatchRequest,
 }
 
 impl WatchRequest {
-    /// Create constructs a `Watch Create Request`
+    /// Creates a new WatchRequest which will subscribe events of the specified key.
     pub fn create(mut key_range: KeyRange) -> Self {
         Self {
             proto: etcdserverpb::WatchRequest {
@@ -25,7 +26,7 @@ impl WatchRequest {
         }
     }
 
-    /// Cancel constructs a `Watch Cancel Request` by watch id
+    /// Creates a new WatchRequest which will unsubscribe the specified watch.
     pub fn cancel(watch_id: usize) -> Self {
         Self {
             proto: etcdserverpb::WatchRequest {
@@ -38,6 +39,8 @@ impl WatchRequest {
         }
     }
 
+    /// Set start revision.
+    /// It only effects when the request is for subscribing.
     pub fn set_start_revision(&mut self, revision: usize) {
         // TODO log warning if not CreateRequest
         match self.proto.request_union.as_mut().unwrap() {
@@ -46,6 +49,8 @@ impl WatchRequest {
         }
     }
 
+    /// Set progress notify.
+    /// It only effects when the request is for subscribing.
     pub fn set_progress_notify(&mut self, progress_notify: bool) {
         // TODO log warning if not CreateRequest
         match self.proto.request_union.as_mut().unwrap() {
@@ -54,6 +59,8 @@ impl WatchRequest {
         }
     }
 
+    /// Set previous key value.
+    /// It only effects when the request is for subscribing.
     pub fn set_prev_kv(&mut self, prev_kv: bool) {
         // TODO log warning if not CreateRequest
         match self.proto.request_union.as_mut().unwrap() {

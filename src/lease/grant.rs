@@ -2,11 +2,13 @@ use std::time::Duration;
 
 use crate::proto::etcdserverpb;
 
+/// Request for granting lease.
 pub struct LeaseGrantRequest {
     proto: etcdserverpb::LeaseGrantRequest,
 }
 
 impl LeaseGrantRequest {
+    /// Creates a new LeaseGrantRequest with the specified TTL.
     pub fn new(ttl: Duration) -> Self {
         let proto = etcdserverpb::LeaseGrantRequest {
             ttl: ttl.as_secs() as i64,
@@ -16,7 +18,7 @@ impl LeaseGrantRequest {
         Self { proto }
     }
 
-    /// set custom lease ID
+    /// Set custom lease ID.
     pub fn set_id(&mut self, id: u64) {
         self.proto.id = id as i64
     }

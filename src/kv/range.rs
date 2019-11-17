@@ -1,11 +1,13 @@
 use super::{KeyRange, KeyValue};
 use crate::proto::etcdserverpb;
 
+/// Request for fetching key-value pairs.
 pub struct RangeRequest {
     proto: etcdserverpb::RangeRequest,
 }
 
 impl RangeRequest {
+    /// Creates a new RangeRequest for the specified key range.
     pub fn new(key_range: KeyRange) -> Self {
         Self {
             proto: etcdserverpb::RangeRequest {
@@ -26,6 +28,8 @@ impl RangeRequest {
         }
     }
 
+    /// Set the maximum number of keys returned for the request.
+    /// When limit is set to 0, it is treated as no limit.
     pub fn set_limit(&mut self, limit: usize) {
         self.proto.limit = limit as i64;
     }
@@ -37,6 +41,7 @@ impl Into<etcdserverpb::RangeRequest> for RangeRequest {
     }
 }
 
+/// Response for RangeRequest.
 #[derive(Debug)]
 pub struct RangeResponse {
     proto: etcdserverpb::RangeResponse,

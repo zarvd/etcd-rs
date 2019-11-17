@@ -14,29 +14,32 @@ use crate::proto::etcdserverpb::client::KvClient;
 use crate::proto::mvccpb;
 use crate::Result;
 
+/// Key-Value client.
 #[derive(Clone)]
 pub struct Kv {
     client: KvClient<Channel>,
 }
 
-/// Key-Value client
 impl Kv {
     pub(crate) fn new(client: KvClient<Channel>) -> Self {
         Self { client }
     }
 
+    /// Performs a key-value saving operation.
     pub async fn put(&mut self, req: PutRequest) -> Result<PutResponse> {
         let resp = self.client.put(tonic::Request::new(req.into())).await?;
 
         Ok(From::from(resp.into_inner()))
     }
 
+    /// Performs a key-value fetching operation.
     pub async fn range(&mut self, req: RangeRequest) -> Result<RangeResponse> {
         let resp = self.client.range(tonic::Request::new(req.into())).await?;
 
         Ok(From::from(resp.into_inner()))
     }
 
+    /// Performs a key-value deleting operation.
     pub async fn delete(&mut self, req: DeleteRequest) -> Result<DeleteResponse> {
         let resp = self
             .client
@@ -46,6 +49,7 @@ impl Kv {
         Ok(From::from(resp.into_inner()))
     }
 
+    /// Performs a transaction operation.
     pub async fn txn(&mut self, req: TxnRequest) -> Result<TxnResponse> {
         let resp = self.client.txn(tonic::Request::new(req.into())).await?;
 
@@ -53,7 +57,7 @@ impl Kv {
     }
 }
 
-/// Key-Value pair
+/// Key-Value pair.
 #[derive(Clone, PartialEq)]
 pub struct KeyValue {
     proto: mvccpb::KeyValue,
@@ -111,13 +115,14 @@ impl From<mvccpb::KeyValue> for KeyValue {
     }
 }
 
-/// KeyRange
+/// KeyRange is an abstraction for describing etcd key of various types.
 pub struct KeyRange {
     key: Vec<u8>,
     range_end: Vec<u8>,
 }
 
 impl KeyRange {
+    /// Creates a new KeyRange for describing a range of multiple keys.
     pub fn range<K, R>(key: K, range_end: R) -> Self
     where
         K: Into<Vec<u8>>,
@@ -129,6 +134,7 @@ impl KeyRange {
         }
     }
 
+    /// Creates a new KeyRange for describing a specified key.
     pub fn key<K>(key: K) -> Self
     where
         K: Into<Vec<u8>>,
@@ -139,6 +145,7 @@ impl KeyRange {
         }
     }
 
+    /// Creates a new KeyRange for describing all keys.
     pub fn all() -> Self {
         Self {
             key: vec![0],
@@ -146,6 +153,7 @@ impl KeyRange {
         }
     }
 
+    /// Creates a new KeyRange for describing keys prefixed with specified value.
     pub fn prefix<K>(prefix: K) -> Self
     where
         K: Into<Vec<u8>>,

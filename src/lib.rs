@@ -1,22 +1,66 @@
+//! An asynchronously etcd client for Rust.
+//!
+//! etcd-rs supports etcd v3 API and async/await syntax.
+//!
+//! # Examples
+//!
+//! A simple key-value read and write operation:
+//!
+//! ```
+//! use etcd_rs::*;
+//!
+//! #[tokio::main]
+//! async fn main() -> Result<()> {
+//!     let client = Client::new(ClientConfig {
+//!         endpoints: vec!["http://127.0.0.1:2379".to_owned()],
+//!         auth: None,
+//!     });
+//!
+//!     let key = "foo";
+//!     let value = "bar";
+//!
+//!     // Put a key-value pair
+//!     let resp = client.kv().put(PutRequest::new(key, value)).await?;
+//!
+//!     println!("Put Response: {:?}", resp);
+//!
+//!     // Get the key-value pair
+//!     let resp = client
+//!         .kv()
+//!         .range(RangeRequest::new(KeyRange::key(key)))
+//!         .await?;
+//!     println!("Range Response: {:?}", resp);
+//!
+//!     // Delete the key-valeu pair
+//!     let resp = client
+//!         .kv()
+//!         .delete(DeleteRequest::new(KeyRange::key(key)))
+//!         .await?;
+//!     println!("Delete Response: {:?}", resp);
+//!
+//!    Ok(())
+//! }
+//! ```
+
 mod client;
 mod kv;
 mod lease;
 mod watch;
 
-pub mod proto {
-    pub mod mvccpb {
+pub(crate) mod proto {
+    pub(crate) mod mvccpb {
         tonic::include_proto!("mvccpb");
     }
 
-    pub mod authpb {
+    pub(crate) mod authpb {
         tonic::include_proto!("authpb");
     }
 
-    pub mod etcdserverpb {
+    pub(crate) mod etcdserverpb {
         tonic::include_proto!("etcdserverpb");
     }
 
-    pub mod v3lockpb {
+    pub(crate) mod v3lockpb {
         tonic::include_proto!("v3lockpb");
     }
 }

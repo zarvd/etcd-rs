@@ -1,11 +1,13 @@
 use super::{KeyRange, KeyValue};
 use crate::proto::etcdserverpb;
 
+/// Request for deleting key-value pairs.
 pub struct DeleteRequest {
     proto: etcdserverpb::DeleteRangeRequest,
 }
 
 impl DeleteRequest {
+    /// Creates a new DeleteRequest for the specified key range.
     pub fn new(key_range: KeyRange) -> Self {
         Self {
             proto: etcdserverpb::DeleteRangeRequest {
@@ -27,6 +29,7 @@ impl Into<etcdserverpb::DeleteRangeRequest> for DeleteRequest {
     }
 }
 
+/// Response for DeleteRequest.
 #[derive(Debug)]
 pub struct DeleteResponse {
     proto: etcdserverpb::DeleteRangeResponse,

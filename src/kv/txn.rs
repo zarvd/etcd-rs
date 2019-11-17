@@ -3,11 +3,13 @@ use crate::proto::etcdserverpb;
 use etcdserverpb::compare::{CompareResult, CompareTarget, TargetUnion};
 use etcdserverpb::Compare;
 
+/// Request for performing transaction operations.
 pub struct TxnRequest {
     proto: etcdserverpb::TxnRequest,
 }
 
 impl TxnRequest {
+    /// Creates a new TxnRequest.
     pub fn new() -> Self {
         Self {
             proto: etcdserverpb::TxnRequest {
@@ -18,7 +20,7 @@ impl TxnRequest {
         }
     }
 
-    /// Add a version compare
+    /// Add a version compare.
     pub fn when_version(mut self, key_range: KeyRange, cmp: TxnCmp, version: usize) -> Self {
         let result: CompareResult = cmp.into();
         self.proto.compare.push(Compare {
@@ -31,7 +33,7 @@ impl TxnRequest {
         self
     }
 
-    /// Add a create revision compare
+    /// Add a create revision compare.
     pub fn when_create_revision(
         mut self,
         key_range: KeyRange,
@@ -49,7 +51,7 @@ impl TxnRequest {
         self
     }
 
-    /// Add a mod revision compare
+    /// Add a mod revision compare.
     pub fn when_mod_revision(mut self, key_range: KeyRange, cmp: TxnCmp, revision: usize) -> Self {
         let result: CompareResult = cmp.into();
         self.proto.compare.push(Compare {
@@ -62,7 +64,7 @@ impl TxnRequest {
         self
     }
 
-    /// Add a value compare
+    /// Add a value compare.
     pub fn when_value<V>(mut self, key_range: KeyRange, cmp: TxnCmp, value: V) -> Self
     where
         V: Into<Vec<u8>>,
@@ -78,7 +80,7 @@ impl TxnRequest {
         self
     }
 
-    /// If compare success, then execute
+    /// If compare success, then execute the specified operations.
     pub fn and_then<O>(mut self, op: O) -> Self
     where
         O: Into<TxnOp>,
@@ -87,7 +89,7 @@ impl TxnRequest {
         self
     }
 
-    /// If compare fail, then execute
+    /// If compare fail, then execute the specified operations.
     pub fn or_else<O>(mut self, op: O) -> Self
     where
         O: Into<TxnOp>,
@@ -103,7 +105,7 @@ impl Into<etcdserverpb::TxnRequest> for TxnRequest {
     }
 }
 
-/// Transaction Operation
+/// Transaction Operation.
 pub enum TxnOp {
     Range(RangeRequest),
     Put(PutRequest),
@@ -150,7 +152,7 @@ impl From<TxnRequest> for TxnOp {
     }
 }
 
-/// Transaction Comapre
+/// Transaction Comparation.
 pub enum TxnCmp {
     Equal,
     NotEqual,

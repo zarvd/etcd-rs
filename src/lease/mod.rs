@@ -132,13 +132,13 @@ impl LeaseKeepAliveTunnel {
     }
 }
 
+/// Lease client.
 #[derive(Clone)]
 pub struct Lease {
     client: LeaseClient<Channel>,
     keep_alive_tunnel: Arc<RwLock<LeaseKeepAliveTunnel>>,
 }
 
-/// Lease client
 impl Lease {
     pub(crate) fn new(client: LeaseClient<Channel>) -> Self {
         let keep_alive_tunnel = Arc::new(RwLock::new(LeaseKeepAliveTunnel::new(client.clone())));
@@ -148,7 +148,7 @@ impl Lease {
         }
     }
 
-    /// Grant a new lease.
+    /// Performs a lease granting operation.
     pub async fn grant(&mut self, req: LeaseGrantRequest) -> Result<LeaseGrantResponse> {
         let resp = self
             .client
@@ -158,7 +158,7 @@ impl Lease {
         Ok(From::from(resp.into_inner()))
     }
 
-    /// Revoke the granted lease.
+    /// Performs a lease revoking operation.
     pub async fn revoke(&mut self, req: LeaseRevokeRequest) -> Result<LeaseRevokeResponse> {
         let resp = self
             .client
@@ -175,7 +175,7 @@ impl Lease {
         self.keep_alive_tunnel.write().unwrap().take_resp_receiver()
     }
 
-    /// Keep the granted lease alive.
+    /// Performs a lease refreshing operation.
     pub async fn keep_alive(&mut self, req: LeaseKeepAliveRequest) {
         self.keep_alive_tunnel
             .write()
