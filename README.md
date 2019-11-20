@@ -5,6 +5,7 @@ etcd for Rust
 [![Docs.rs][docs-badge]][docs-url]
 [![MIT licensed][mit-badge]][mit-url]
 [![Travis Build Status][travis-badge]][travis-url]
+[![Dependency Status][deps-badge]][deps-url]
 
 [crates-badge]: https://img.shields.io/crates/v/etcd-rs.svg
 [crates-url]: https://crates.io/crates/etcd-rs
@@ -14,6 +15,8 @@ etcd for Rust
 [mit-url]: LICENSE-MIT
 [travis-badge]: https://travis-ci.org/ccc13/etcd-rs.svg?branch=master
 [travis-url]: https://travis-ci.org/ccc13/etcd-rs
+[deps-badge]: https://deps.rs/repo/github/ccc13/etcd-rs/status.svg
+[deps-url]: https://deps.rs/repo/github/ccc13/etcd-rs
 
 **NOTE**: Branch [master](https://github.com/ccc13/etcd-rs/tree/master) is currently under development. For v0.1.x based releases please check out the [v0.1.x](https://github.com/ccc13/etcd-rs/tree/v0.1.x) branch.
 
