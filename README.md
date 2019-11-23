@@ -18,13 +18,18 @@ etcd for Rust
 [deps-badge]: https://deps.rs/repo/github/ccc13/etcd-rs/status.svg
 [deps-url]: https://deps.rs/repo/github/ccc13/etcd-rs
 
+
+An [etcd](https://github.com/etcd-io/etcd)(API v3) client for Rust, and it provides `async/await` APIs backed by [tokio](https://github.com/tokio-rs/tokio) and [tonic](https://github.com/hyperium/tonic).
+
+Documentation on the library can be found at [docs.rs/etcd-rs](https://docs.rs/etcd-rs).
+
 **NOTE**: Branch [master](https://github.com/ccc13/etcd-rs/tree/master) is currently under development. For v0.1.x based releases please check out the [v0.1.x](https://github.com/ccc13/etcd-rs/tree/v0.1.x) branch.
 
 Features
 ----
 
-- Asynchronous (Supports async/await syntax)
-- Etcd APIv3 (Supported by [tonic](https://github.com/hyperium/tonic))
+- Asynchronous
+- Etcd APIv3
 
 Examples
 ----
