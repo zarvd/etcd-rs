@@ -11,10 +11,10 @@
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<()> {
-//!     let client = Client::new(ClientConfig {
+//!     let client = Client::connect(ClientConfig {
 //!         endpoints: vec!["http://127.0.0.1:2379".to_owned()],
 //!         auth: None,
-//!     });
+//!     }).await?;
 //!
 //!     // print out all received watch responses
 //!     let mut inbound = client.watch().responses();

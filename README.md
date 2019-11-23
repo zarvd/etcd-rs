@@ -51,103 +51,21 @@ etcd-rs = "0.2.0-alpha.1"
 ```rust
 let endpoints = vec!["http://127.0.0.1:2379".to_owned()];
 
-let client = Client::new(ClientConfig {
+let client = Client::connect(ClientConfig {
     endpoints,
     auth: None,
-});
+}).await;
 ```
 
-#### Key Value
-
-##### Put
+if authenticate enabled
 
 ```rust
-client.kv().put(PutRequest::new("foo", "bar")).await?;
-```
+let endpoints = vec!["http://127.0.0.1:2379".to_owned()];
 
-##### Get
-
-Get a key-value pair
-
-```rust
-let resp = client.kv().get(KeyRange::key("foo")).await?;
-```
-
-List key-value paris by prefix
-
-```rust
-let resp = client.kv().get(KeyRange::prefix("foo")).await?;
-```
-
-List all key-value paris
-
-```rust
-let resp = client.kv().get(KeyRange::all()).await?;
-```
-
-##### Delete
-
-Delete a key-value pair
-
-```rust
-client.kv().delete(KeyRange::key("foo")).await?;
-```
-
-Delete key-value paris by prefix
-
-```rust
-client.kv().delete(KeyRange::prefix("foo")).await?;
-```
-
-Delete all key-value paris
-
-```rust
-client.kv().delete(KeyRange::all()).await?;
-```
-
-#### Lease
-
-##### Grant
-
-```rust
-let lease = client
-    .lease()
-    .grant(LeaseGrantRequest::new(Duration::from_secs(3)))
-    .await?;
-        
-println!("lease id: {}", lease.id());
-
-// Put key-value with the above lease
-client
-    .kv()
-    .put({
-        let mut req = PutRequest::new(key, "bar");
-        req.set_lease(lease.id());
-
-        req
-    })
-    .await?;
-```
-
-##### Revoke
-
-```rust
-client.lease().revoke(LeaseRevokeRequest::new(lease_id)).await?;
-```
-
-##### Keep Alive
-
-```rust
-use tokio::timer::Interval;
-let mut interval = Interval::new_interval(Duration::from_secs(1));
-
-loop {
-    interval.next().await;
-    client
-        .lease()
-        .keep_alive(LeaseKeepAliveRequest::new(lease_id))
-        .await;
-}
+let client = Client::connect(ClientConfig {
+    endpoints,
+    auth: Some(("user".to_owned(), "password".to_owned())),
+}).await;
 ```
 
 License
