@@ -42,6 +42,7 @@
 //! }
 //! ```
 
+mod auth;
 mod client;
 mod kv;
 mod lease;
@@ -75,6 +76,7 @@ pub use lease::{
     Lease, LeaseGrantRequest, LeaseGrantResponse, LeaseKeepAliveRequest, LeaseKeepAliveResponse,
     LeaseRevokeRequest, LeaseRevokeResponse,
 };
+pub use auth::{Auth, AuthenticateRequest, AuthenticateResponse};
 pub use response_header::ResponseHeader;
 pub use watch::{Event, EventType, Watch, WatchRequest, WatchResponse};
 
