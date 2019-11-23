@@ -67,6 +67,7 @@ pub(crate) mod proto {
     }
 }
 
+pub use auth::{Auth, AuthenticateRequest, AuthenticateResponse};
 pub use client::{Client, ClientConfig};
 pub use kv::{
     DeleteRequest, DeleteResponse, KeyRange, KeyValue, Kv, PutRequest, PutResponse, RangeRequest,
@@ -76,7 +77,6 @@ pub use lease::{
     Lease, LeaseGrantRequest, LeaseGrantResponse, LeaseKeepAliveRequest, LeaseKeepAliveResponse,
     LeaseRevokeRequest, LeaseRevokeResponse,
 };
-pub use auth::{Auth, AuthenticateRequest, AuthenticateResponse};
 pub use response_header::ResponseHeader;
 pub use watch::{Event, EventType, Watch, WatchRequest, WatchResponse};
 

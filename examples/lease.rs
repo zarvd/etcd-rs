@@ -119,7 +119,8 @@ async fn main() -> Result<()> {
     let client = Client::connect(ClientConfig {
         endpoints: vec!["http://127.0.0.1:2379".to_owned()],
         auth: None,
-    }).await?;
+    })
+    .await?;
 
     // grant_lease(&client).await?;
     keep_alive_lease(&client).await?;

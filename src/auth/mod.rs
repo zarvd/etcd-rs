@@ -1,6 +1,6 @@
 mod authenticate;
 
-pub use authenticate::{AuthenticateRequest,AuthenticateResponse};
+pub use authenticate::{AuthenticateRequest, AuthenticateResponse};
 
 use tonic::transport::Channel;
 
@@ -21,7 +21,10 @@ impl Auth {
     /// Performs an authenticating operation.
     /// It generates an authentication token based on a given user name and password.
     pub async fn authenticate(&mut self, req: AuthenticateRequest) -> Result<AuthenticateResponse> {
-        let resp = self.client.authenticate(tonic::Request::new(req.into())).await?;
+        let resp = self
+            .client
+            .authenticate(tonic::Request::new(req.into()))
+            .await?;
 
         Ok(From::from(resp.into_inner()))
     }

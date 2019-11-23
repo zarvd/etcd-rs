@@ -47,7 +47,6 @@ impl AuthenticateResponse {
     }
 }
 
-
 impl From<etcdserverpb::AuthenticateResponse> for AuthenticateResponse {
     fn from(resp: etcdserverpb::AuthenticateResponse) -> Self {
         Self { proto: resp }
