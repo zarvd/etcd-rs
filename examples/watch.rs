@@ -34,10 +34,10 @@ async fn watch(client: &Client) -> Result<()> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let client = Client::new(ClientConfig {
+    let client = Client::connect(ClientConfig {
         endpoints: vec!["http://127.0.0.1:2379".to_owned()],
         auth: None,
-    });
+    }).await?;
 
     watch(&client).await?;
 
