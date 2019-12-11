@@ -172,6 +172,12 @@ impl KeyRange {
         K: Into<Vec<u8>>,
     {
         let key = prefix.into();
+        if key.is_empty() {
+            // An empty Vec<u8> results in an invalid KeyRange.
+            // Assume that an empty value passed to this method implies no prefix (i.e., all keys).
+            return KeyRange::all();
+        }
+
         let range_end = {
             let mut end = key.clone();
 
