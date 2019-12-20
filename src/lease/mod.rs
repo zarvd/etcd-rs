@@ -68,12 +68,12 @@ pub use revoke::{LeaseRevokeRequest, LeaseRevokeResponse};
 
 use std::sync::{Arc, RwLock};
 
-use tokio::prelude::*;
+use tokio::stream::Stream;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tonic::transport::Channel;
 
 use crate::proto::etcdserverpb;
-use crate::proto::etcdserverpb::client::LeaseClient;
+use crate::proto::etcdserverpb::lease_client::LeaseClient;
 use crate::Result;
 
 /// LeaseKeepAliveTunnel is a reusable connection for `Lease Keep Alive` operation.
@@ -87,11 +87,11 @@ struct LeaseKeepAliveTunnel {
 impl LeaseKeepAliveTunnel {
     fn new(mut client: LeaseClient<Channel>) -> Self {
         let (req_sender, mut req_receiver) = unbounded_channel::<LeaseKeepAliveRequest>();
-        let (mut resp_sender, resp_receiver) =
+        let (resp_sender, resp_receiver) =
             unbounded_channel::<std::result::Result<LeaseKeepAliveResponse, tonic::Status>>();
 
         let request = tonic::Request::new(async_stream::stream! {
-            while let Some(req) = req_receiver.next().await {
+            while let Some(req) = req_receiver.recv().await {
                 let pb: etcdserverpb::LeaseKeepAliveRequest = req.into();
                 yield pb;
             }
@@ -105,13 +105,13 @@ impl LeaseKeepAliveTunnel {
                 let resp = inbound.message().await;
                 match resp {
                     Ok(Some(resp)) => {
-                        resp_sender.send(Ok(From::from(resp))).await.unwrap();
+                        resp_sender.send(Ok(From::from(resp))).unwrap();
                     }
                     Ok(None) => {
                         return;
                     }
                     Err(e) => {
-                        resp_sender.send(Err(e)).await.unwrap();
+                        resp_sender.send(Err(e)).unwrap();
                     }
                 };
             }
@@ -182,7 +182,6 @@ impl Lease {
             .unwrap()
             .req_sender
             .send(req)
-            .await
             .unwrap();
     }
 }

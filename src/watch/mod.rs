@@ -20,7 +20,7 @@
 //!     let mut inbound = client.watch().responses();
 //!     tokio::spawn(async move {
 //!         loop {
-//!             let resp = inbound.next().await.unwrap();
+//!             let resp = inbound.recv().await.unwrap();
 //!             println!("watch response: {:?}", resp);
 //!         }
 //!     });
@@ -48,12 +48,12 @@ pub use watch::{WatchRequest, WatchResponse};
 
 use std::sync::{Arc, RwLock};
 
-use tokio::prelude::*;
+use tokio::stream::Stream;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tonic::transport::Channel;
 
 use crate::proto::etcdserverpb;
-use crate::proto::etcdserverpb::client::WatchClient;
+use crate::proto::etcdserverpb::watch_client::WatchClient;
 use crate::proto::mvccpb;
 use crate::KeyValue;
 
@@ -67,11 +67,11 @@ struct WatchTunnel {
 impl WatchTunnel {
     fn new(mut client: WatchClient<Channel>) -> Self {
         let (req_sender, mut req_receiver) = unbounded_channel::<WatchRequest>();
-        let (mut resp_sender, resp_receiver) =
+        let (resp_sender, resp_receiver) =
             unbounded_channel::<Result<WatchResponse, tonic::Status>>();
 
         let request = tonic::Request::new(async_stream::stream! {
-            while let Some(req) = req_receiver.next().await {
+            while let Some(req) = req_receiver.recv().await {
                 let pb: etcdserverpb::WatchRequest = req.into();
                 yield pb;
             }
@@ -85,13 +85,13 @@ impl WatchTunnel {
                 let resp = inbound.message().await;
                 match resp {
                     Ok(Some(resp)) => {
-                        resp_sender.send(Ok(From::from(resp))).await.unwrap();
+                        resp_sender.send(Ok(From::from(resp))).unwrap();
                     }
                     Ok(None) => {
                         return;
                     }
                     Err(e) => {
-                        resp_sender.send(Err(e)).await.unwrap();
+                        resp_sender.send(Err(e)).unwrap();
                     }
                 };
             }
@@ -131,13 +131,7 @@ impl Watch {
 
     /// Performs a watch operation.
     pub async fn watch(&mut self, req: WatchRequest) {
-        self.tunnel
-            .write()
-            .unwrap()
-            .req_sender
-            .send(req)
-            .await
-            .unwrap();
+        self.tunnel.write().unwrap().req_sender.send(req).unwrap();
     }
 }
 

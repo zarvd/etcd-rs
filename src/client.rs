@@ -1,7 +1,10 @@
 use std::sync::Arc;
 use tonic::transport::Channel;
 
-use crate::proto::etcdserverpb::client::{AuthClient, KvClient, LeaseClient, WatchClient};
+use crate::proto::etcdserverpb::{
+    auth_client::AuthClient, kv_client::KvClient, lease_client::LeaseClient,
+    watch_client::WatchClient,
+};
 use crate::{Auth, Kv, Lease, Result, Watch};
 
 /// Config for establishing etcd client.
@@ -34,7 +37,7 @@ impl Client {
         let channel = {
             let endpoints = endpoints
                 .into_iter()
-                .map(|e| Channel::from_shared(&e[..]).expect("parse endpoint URI"));
+                .map(|e| Channel::from_shared(e).expect("parse endpoint URI"));
             Channel::balance_list(endpoints)
         };
 
@@ -61,10 +64,10 @@ impl Client {
             };
 
             let endpoints = cfg.endpoints.into_iter().map(|e| {
-                let mut builder = Channel::from_shared(&e[..]).expect("parse endpoint URI");
+                let mut builder = Channel::from_shared(e).expect("parse endpoint URI");
 
                 if let Some(token) = token.clone() {
-                    builder.intercept_headers(move |headers| {
+                    builder = builder.intercept_headers(move |headers| {
                         headers.insert("authorization", token.parse().unwrap());
                     });
                 }

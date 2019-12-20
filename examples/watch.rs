@@ -1,4 +1,4 @@
-use tokio::prelude::*;
+use tokio::stream::StreamExt;
 
 use etcd_rs::*;
 

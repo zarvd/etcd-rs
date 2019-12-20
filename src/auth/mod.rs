@@ -4,7 +4,7 @@ pub use authenticate::{AuthenticateRequest, AuthenticateResponse};
 
 use tonic::transport::Channel;
 
-use crate::proto::etcdserverpb::client::AuthClient;
+use crate::proto::etcdserverpb::auth_client::AuthClient;
 use crate::Result;
 
 /// Auth client.
