@@ -7,8 +7,6 @@
 //! ```no_run
 //! use std::time::Duration;
 //!
-//! use tokio::prelude::*;
-//!
 //! use etcd_rs::*;
 //!
 //! #[tokio::main]
@@ -43,11 +41,10 @@
 //!         // keep alive the lease every 1 second
 //!         let client = client.clone();
 //!
-//!         use tokio::timer::Interval;
-//!         let mut interval = Interval::new_interval(Duration::from_secs(1));
+//!         let mut interval = tokio::time::interval(Duration::from_secs(1));
 //!
 //!         loop {
-//!             interval.next().await;
+//!             interval.tick().await;
 //!             client
 //!                 .lease()
 //!                 .keep_alive(LeaseKeepAliveRequest::new(lease_id))

@@ -5,7 +5,7 @@
 //! Watch key `foo` changes
 //!
 //! ```no_run
-//! use tokio::prelude::*;
+//! use tokio::stream::StreamExt;
 //!
 //! use etcd_rs::*;
 //!
@@ -20,7 +20,7 @@
 //!     let mut inbound = client.watch().responses();
 //!     tokio::spawn(async move {
 //!         loop {
-//!             let resp = inbound.recv().await.unwrap();
+//!             let resp = inbound.next().await.unwrap();
 //!             println!("watch response: {:?}", resp);
 //!         }
 //!     });
