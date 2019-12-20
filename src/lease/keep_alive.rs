@@ -2,6 +2,7 @@ use crate::proto::etcdserverpb;
 use crate::ResponseHeader;
 
 /// Request for refreshing lease.
+#[derive(Debug)]
 pub struct LeaseKeepAliveRequest {
     proto: etcdserverpb::LeaseKeepAliveRequest,
 }

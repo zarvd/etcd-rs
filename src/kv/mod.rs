@@ -10,7 +10,7 @@ pub use txn::{TxnCmp, TxnRequest, TxnResponse};
 
 use tonic::transport::Channel;
 
-use crate::proto::etcdserverpb::client::KvClient;
+use crate::proto::etcdserverpb::kv_client::KvClient;
 use crate::proto::mvccpb;
 use crate::Result;
 

@@ -5,6 +5,7 @@ use crate::KeyRange;
 use crate::ResponseHeader;
 
 /// Request for creating or canceling watch.
+#[derive(Debug)]
 pub struct WatchRequest {
     proto: etcdserverpb::WatchRequest,
 }
