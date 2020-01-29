@@ -1,5 +1,6 @@
 use std::sync::Arc;
-use tonic::transport::Channel;
+
+use tonic::{metadata::MetadataValue, transport::Channel, Interceptor, Request};
 
 use crate::proto::etcdserverpb::{
     auth_client::AuthClient, kv_client::KvClient, lease_client::LeaseClient,
@@ -54,34 +55,62 @@ impl Client {
 
     /// Connects to etcd cluster and returns a client.
     pub async fn connect(cfg: ClientConfig) -> Result<Self> {
+        // If authentication provided, geneartes token before connecting.
+        let token = match cfg.auth {
+            Some(auth) => {
+                Some(Self::generate_auth_token(cfg.endpoints.clone(), auth.clone()).await?)
+            }
+            None => None,
+        };
+
+        let auth_interceptor = if let Some(token) = token {
+            let token = MetadataValue::from_str(&token).unwrap();
+            Some(Interceptor::new(move |mut req: Request<()>| {
+                req.metadata_mut().insert("authorization", token.clone());
+
+                Ok(req)
+            }))
+        } else {
+            None
+        };
+
         let channel = {
-            // If authentication provided, geneartes token before connecting.
-            let token = match cfg.auth {
-                Some(auth) => {
-                    Some(Self::generate_auth_token(cfg.endpoints.clone(), auth.clone()).await?)
-                }
-                None => None,
-            };
-
-            let endpoints = cfg.endpoints.into_iter().map(|e| {
-                let mut builder = Channel::from_shared(e).expect("parse endpoint URI");
-
-                if let Some(token) = token.clone() {
-                    builder = builder.intercept_headers(move |headers| {
-                        headers.insert("authorization", token.parse().unwrap());
-                    });
-                }
-
-                builder
-            });
+            let endpoints = cfg
+                .endpoints
+                .into_iter()
+                .map(|e| Channel::from_shared(e).expect("parse endpoint URI"));
             Channel::balance_list(endpoints)
         };
 
         let inner = {
-            let auth_client = Auth::new(AuthClient::new(channel.clone()));
-            let kv_client = Kv::new(KvClient::new(channel.clone()));
-            let watch_client = Watch::new(WatchClient::new(channel.clone()));
-            let lease_client = Lease::new(LeaseClient::new(channel.clone()));
+            let (auth_client, kv_client, watch_client, lease_client) =
+                if let Some(auth_interceptor) = auth_interceptor {
+                    (
+                        Auth::new(AuthClient::with_interceptor(
+                            channel.clone(),
+                            auth_interceptor.clone(),
+                        )),
+                        Kv::new(KvClient::with_interceptor(
+                            channel.clone(),
+                            auth_interceptor.clone(),
+                        )),
+                        Watch::new(WatchClient::with_interceptor(
+                            channel.clone(),
+                            auth_interceptor.clone(),
+                        )),
+                        Lease::new(LeaseClient::with_interceptor(
+                            channel.clone(),
+                            auth_interceptor,
+                        )),
+                    )
+                } else {
+                    (
+                        Auth::new(AuthClient::new(channel.clone())),
+                        Kv::new(KvClient::new(channel.clone())),
+                        Watch::new(WatchClient::new(channel.clone())),
+                        Lease::new(LeaseClient::new(channel.clone())),
+                    )
+                };
             Inner {
                 channel,
                 auth_client,
