@@ -1,11 +1,11 @@
 [package]
 name = "etcd-rs"
 version = "0.2.0"
-authors = ["ccc13 <currantxx@gmail.com>"]
+authors = ["ccc <currantxx@gmail.com>"]
 edition = "2018"
 keywords = ["etcd", "future", "async"]
-repository = "https://github.com/ccc13/etcd-rs"
-homepage = "https://github.com/ccc13/etcd-rs"
+repository = "https://github.com/luncj/etcd-rs"
+homepage = "https://github.com/luncj/etcd-rs"
 description = "etcd client for rust"
 documentation = "https://docs.rs/etcd-rs"
 license = "MIT"
