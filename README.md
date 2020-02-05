@@ -23,8 +23,6 @@ An [etcd](https://github.com/etcd-io/etcd)(API v3) client for Rust, and it provi
 
 Documentation on the library can be found at [docs.rs/etcd-rs](https://docs.rs/etcd-rs).
 
-**NOTE**: Branch [master](https://github.com/ccc13/etcd-rs/tree/master) is currently under development. For v0.1.x based releases please check out the [v0.1.x](https://github.com/ccc13/etcd-rs/tree/v0.1.x) branch.
-
 Features
 ----
 
@@ -43,7 +41,7 @@ Add following dependencies in your project `cargo.toml`:
 
 ```toml
 [dependencies]
-etcd-rs = "0.2.0-alpha.1"
+etcd-rs = "0.2"
 ```
 
 #### Setup Client
