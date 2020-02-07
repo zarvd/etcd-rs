@@ -13,10 +13,10 @@ etcd for Rust
 [docs-url]: https://docs.rs/etcd-rs
 [mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
 [mit-url]: LICENSE-MIT
-[travis-badge]: https://travis-ci.org/ccc13/etcd-rs.svg?branch=master
-[travis-url]: https://travis-ci.org/ccc13/etcd-rs
-[deps-badge]: https://deps.rs/repo/github/ccc13/etcd-rs/status.svg
-[deps-url]: https://deps.rs/repo/github/ccc13/etcd-rs
+[travis-badge]: https://travis-ci.org/luncj/etcd-rs.svg?branch=master
+[travis-url]: https://travis-ci.org/luncj/etcd-rs
+[deps-badge]: https://deps.rs/repo/github/luncj/etcd-rs/status.svg
+[deps-url]: https://deps.rs/repo/github/luncj/etcd-rs
 
 
 An [etcd](https://github.com/etcd-io/etcd)(API v3) client for Rust, and it provides `async/await` APIs backed by [tokio](https://github.com/tokio-rs/tokio) and [tonic](https://github.com/hyperium/tonic).
