@@ -6,20 +6,15 @@ async fn watch(client: &Client) -> Result<()> {
     println!("watch key value modification");
 
     {
+        let mut inbound = client.watch(KeyRange::key("foo"));
+
         // print out all received watch responses
-        let mut inbound = client.watch().responses();
         tokio::spawn(async move {
-            loop {
-                let resp = inbound.next().await.unwrap();
+            while let Some(resp) = inbound.next().await {
                 println!("watch response: {:?}", resp);
             }
         });
     }
-
-    client
-        .watch()
-        .watch(WatchRequest::create(KeyRange::key("foo")))
-        .await;
 
     let key = "foo";
     client.kv().put(PutRequest::new(key, "bar")).await?;
