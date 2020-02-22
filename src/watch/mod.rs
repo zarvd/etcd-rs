@@ -55,6 +55,7 @@ use tonic::transport::Channel;
 use crate::proto::etcdserverpb;
 use crate::proto::etcdserverpb::watch_client::WatchClient;
 use crate::proto::mvccpb;
+use crate::KeyRange;
 use crate::KeyValue;
 
 /// WatchTunnel is a reusable connection for `Watch` operation
@@ -124,14 +125,17 @@ impl Watch {
         Self { client, tunnel }
     }
 
-    /// Fetch response stream.
-    pub fn responses(&mut self) -> impl Stream<Item = Result<WatchResponse, tonic::Status>> {
-        self.tunnel.write().unwrap().take_resp_receiver()
-    }
-
     /// Performs a watch operation.
-    pub async fn watch(&mut self, req: WatchRequest) {
-        self.tunnel.write().unwrap().req_sender.send(req).unwrap();
+    pub fn watch(
+        &mut self,
+        key_range: KeyRange,
+    ) -> impl Stream<Item = Result<WatchResponse, tonic::Status>> {
+        let mut tunnel = self.tunnel.write().unwrap();
+        tunnel
+            .req_sender
+            .send(WatchRequest::create(key_range))
+            .unwrap();
+        tunnel.take_resp_receiver()
     }
 }
 

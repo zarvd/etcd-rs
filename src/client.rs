@@ -1,12 +1,14 @@
 use std::sync::Arc;
 
+use tokio::stream::Stream;
 use tonic::{metadata::MetadataValue, transport::Channel, Interceptor, Request};
 
 use crate::proto::etcdserverpb::{
     auth_client::AuthClient, kv_client::KvClient, lease_client::LeaseClient,
     watch_client::WatchClient,
 };
-use crate::{Auth, Kv, Lease, Result as Res, Watch};
+use crate::watch::WatchResponse;
+use crate::{Auth, KeyRange, Kv, Lease, Result as Res, Watch};
 
 /// Config for establishing etcd client.
 pub struct ClientConfig {
@@ -136,8 +138,17 @@ impl Client {
     }
 
     /// Gets a watch client.
-    pub fn watch(&self) -> Watch {
+    pub fn watch_client(&self) -> Watch {
         self.inner.watch_client.clone()
+    }
+
+    /// Perform a watch operation
+    pub fn watch(
+        &self,
+        key_range: KeyRange,
+    ) -> impl Stream<Item = Result<WatchResponse, tonic::Status>> {
+        let mut client = self.inner.watch_client.clone();
+        client.watch(key_range)
     }
 
     /// Gets a lease client.
