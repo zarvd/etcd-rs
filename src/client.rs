@@ -6,7 +6,7 @@ use crate::proto::etcdserverpb::{
     auth_client::AuthClient, kv_client::KvClient, lease_client::LeaseClient,
     watch_client::WatchClient,
 };
-use crate::{Auth, Kv, Lease, Result, Watch};
+use crate::{Auth, Kv, Lease, Result as Res, Watch};
 
 /// Config for establishing etcd client.
 pub struct ClientConfig {
@@ -32,7 +32,7 @@ pub(crate) struct Inner {
 impl Client {
     /// Connects to etcd generate auth token.
     /// The client connection used to request the authentication token is typically thrown away; it cannot carry the new token’s credentials. This is because gRPC doesn’t provide a way for adding per RPC credential after creation of the connection
-    async fn generate_auth_token(endpoints: Vec<String>, auth: (String, String)) -> Result<String> {
+    async fn generate_auth_token(endpoints: Vec<String>, auth: (String, String)) -> Res<String> {
         use crate::AuthenticateRequest;
 
         let channel = {
@@ -54,7 +54,7 @@ impl Client {
     }
 
     /// Connects to etcd cluster and returns a client.
-    pub async fn connect(cfg: ClientConfig) -> Result<Self> {
+    pub async fn connect(cfg: ClientConfig) -> Res<Self> {
         // If authentication provided, geneartes token before connecting.
         let token = match cfg.auth {
             Some(auth) => {
