@@ -5,7 +5,7 @@ pub use authenticate::{AuthenticateRequest, AuthenticateResponse};
 use tonic::transport::Channel;
 
 use crate::proto::etcdserverpb::auth_client::AuthClient;
-use crate::Result;
+use crate::Result as Res;
 
 /// Auth client.
 #[derive(Clone)]
@@ -20,7 +20,7 @@ impl Auth {
 
     /// Performs an authenticating operation.
     /// It generates an authentication token based on a given user name and password.
-    pub async fn authenticate(&mut self, req: AuthenticateRequest) -> Result<AuthenticateResponse> {
+    pub async fn authenticate(&mut self, req: AuthenticateRequest) -> Res<AuthenticateResponse> {
         let resp = self
             .client
             .authenticate(tonic::Request::new(req.into()))

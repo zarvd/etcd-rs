@@ -71,21 +71,20 @@ use tonic::transport::Channel;
 
 use crate::proto::etcdserverpb;
 use crate::proto::etcdserverpb::lease_client::LeaseClient;
-use crate::Result;
+use crate::Result as Res;
 
 /// LeaseKeepAliveTunnel is a reusable connection for `Lease Keep Alive` operation.
 /// The underlying gRPC method is Bi-directional streaming.
 struct LeaseKeepAliveTunnel {
     req_sender: UnboundedSender<LeaseKeepAliveRequest>,
-    resp_receiver:
-        Option<UnboundedReceiver<std::result::Result<LeaseKeepAliveResponse, tonic::Status>>>,
+    resp_receiver: Option<UnboundedReceiver<Result<LeaseKeepAliveResponse, tonic::Status>>>,
 }
 
 impl LeaseKeepAliveTunnel {
     fn new(mut client: LeaseClient<Channel>) -> Self {
         let (req_sender, mut req_receiver) = unbounded_channel::<LeaseKeepAliveRequest>();
         let (resp_sender, resp_receiver) =
-            unbounded_channel::<std::result::Result<LeaseKeepAliveResponse, tonic::Status>>();
+            unbounded_channel::<Result<LeaseKeepAliveResponse, tonic::Status>>();
 
         let request = tonic::Request::new(async_stream::stream! {
             while let Some(req) = req_receiver.recv().await {
@@ -122,7 +121,7 @@ impl LeaseKeepAliveTunnel {
 
     fn take_resp_receiver(
         &mut self,
-    ) -> UnboundedReceiver<std::result::Result<LeaseKeepAliveResponse, tonic::Status>> {
+    ) -> UnboundedReceiver<Result<LeaseKeepAliveResponse, tonic::Status>> {
         self.resp_receiver
             .take()
             .expect("take the unique watch response receiver")
@@ -146,7 +145,7 @@ impl Lease {
     }
 
     /// Performs a lease granting operation.
-    pub async fn grant(&mut self, req: LeaseGrantRequest) -> Result<LeaseGrantResponse> {
+    pub async fn grant(&mut self, req: LeaseGrantRequest) -> Res<LeaseGrantResponse> {
         let resp = self
             .client
             .lease_grant(tonic::Request::new(req.into()))
@@ -156,7 +155,7 @@ impl Lease {
     }
 
     /// Performs a lease revoking operation.
-    pub async fn revoke(&mut self, req: LeaseRevokeRequest) -> Result<LeaseRevokeResponse> {
+    pub async fn revoke(&mut self, req: LeaseRevokeRequest) -> Res<LeaseRevokeResponse> {
         let resp = self
             .client
             .lease_revoke(tonic::Request::new(req.into()))
@@ -168,7 +167,7 @@ impl Lease {
     /// Fetch keep alive response stream.
     pub fn keep_alive_responses(
         &mut self,
-    ) -> impl Stream<Item = std::result::Result<LeaseKeepAliveResponse, tonic::Status>> {
+    ) -> impl Stream<Item = Result<LeaseKeepAliveResponse, tonic::Status>> {
         self.keep_alive_tunnel.write().unwrap().take_resp_receiver()
     }
 

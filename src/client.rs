@@ -1,12 +1,14 @@
 use std::sync::Arc;
 
+use tokio::stream::Stream;
 use tonic::{metadata::MetadataValue, transport::Channel, Interceptor, Request};
 
 use crate::proto::etcdserverpb::{
     auth_client::AuthClient, kv_client::KvClient, lease_client::LeaseClient,
     watch_client::WatchClient,
 };
-use crate::{Auth, Kv, Lease, Result, Watch};
+use crate::watch::WatchResponse;
+use crate::{Auth, KeyRange, Kv, Lease, Result as Res, Watch};
 
 /// Config for establishing etcd client.
 pub struct ClientConfig {
@@ -32,7 +34,7 @@ pub(crate) struct Inner {
 impl Client {
     /// Connects to etcd generate auth token.
     /// The client connection used to request the authentication token is typically thrown away; it cannot carry the new token’s credentials. This is because gRPC doesn’t provide a way for adding per RPC credential after creation of the connection
-    async fn generate_auth_token(endpoints: Vec<String>, auth: (String, String)) -> Result<String> {
+    async fn generate_auth_token(endpoints: Vec<String>, auth: (String, String)) -> Res<String> {
         use crate::AuthenticateRequest;
 
         let channel = {
@@ -54,7 +56,7 @@ impl Client {
     }
 
     /// Connects to etcd cluster and returns a client.
-    pub async fn connect(cfg: ClientConfig) -> Result<Self> {
+    pub async fn connect(cfg: ClientConfig) -> Res<Self> {
         // If authentication provided, geneartes token before connecting.
         let token = match cfg.auth {
             Some(auth) => {
@@ -136,8 +138,17 @@ impl Client {
     }
 
     /// Gets a watch client.
-    pub fn watch(&self) -> Watch {
+    pub fn watch_client(&self) -> Watch {
         self.inner.watch_client.clone()
+    }
+
+    /// Perform a watch operation
+    pub fn watch(
+        &self,
+        key_range: KeyRange,
+    ) -> impl Stream<Item = Result<WatchResponse, tonic::Status>> {
+        let mut client = self.inner.watch_client.clone();
+        client.watch(key_range)
     }
 
     /// Gets a lease client.

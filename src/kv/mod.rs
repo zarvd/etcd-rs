@@ -12,7 +12,7 @@ use tonic::transport::Channel;
 
 use crate::proto::etcdserverpb::kv_client::KvClient;
 use crate::proto::mvccpb;
-use crate::Result;
+use crate::Result as Res;
 
 /// Key-Value client.
 #[derive(Clone)]
@@ -26,21 +26,21 @@ impl Kv {
     }
 
     /// Performs a key-value saving operation.
-    pub async fn put(&mut self, req: PutRequest) -> Result<PutResponse> {
+    pub async fn put(&mut self, req: PutRequest) -> Res<PutResponse> {
         let resp = self.client.put(tonic::Request::new(req.into())).await?;
 
         Ok(From::from(resp.into_inner()))
     }
 
     /// Performs a key-value fetching operation.
-    pub async fn range(&mut self, req: RangeRequest) -> Result<RangeResponse> {
+    pub async fn range(&mut self, req: RangeRequest) -> Res<RangeResponse> {
         let resp = self.client.range(tonic::Request::new(req.into())).await?;
 
         Ok(From::from(resp.into_inner()))
     }
 
     /// Performs a key-value deleting operation.
-    pub async fn delete(&mut self, req: DeleteRequest) -> Result<DeleteResponse> {
+    pub async fn delete(&mut self, req: DeleteRequest) -> Res<DeleteResponse> {
         let resp = self
             .client
             .delete_range(tonic::Request::new(req.into()))
@@ -50,7 +50,7 @@ impl Kv {
     }
 
     /// Performs a transaction operation.
-    pub async fn txn(&mut self, req: TxnRequest) -> Result<TxnResponse> {
+    pub async fn txn(&mut self, req: TxnRequest) -> Res<TxnResponse> {
         let resp = self.client.txn(tonic::Request::new(req.into())).await?;
 
         Ok(From::from(resp.into_inner()))
