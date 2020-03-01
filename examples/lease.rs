@@ -64,7 +64,7 @@ async fn keep_alive_lease(client: &Client) -> Result<()> {
 
     {
         // watch keep alive event
-        let mut inbound = client.lease().keep_alive_responses();
+        let mut inbound = client.lease().keep_alive_responses().await;
         tokio::spawn(async move {
             loop {
                 let resp = inbound.next().await.unwrap();

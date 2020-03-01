@@ -63,10 +63,11 @@ pub use grant::{LeaseGrantRequest, LeaseGrantResponse};
 pub use keep_alive::{LeaseKeepAliveRequest, LeaseKeepAliveResponse};
 pub use revoke::{LeaseRevokeRequest, LeaseRevokeResponse};
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use tokio::stream::Stream;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
+use tokio::sync::RwLock;
 use tonic::transport::Channel;
 
 use crate::proto::etcdserverpb;
@@ -165,17 +166,17 @@ impl Lease {
     }
 
     /// Fetch keep alive response stream.
-    pub fn keep_alive_responses(
+    pub async fn keep_alive_responses(
         &mut self,
     ) -> impl Stream<Item = Result<LeaseKeepAliveResponse, tonic::Status>> {
-        self.keep_alive_tunnel.write().unwrap().take_resp_receiver()
+        self.keep_alive_tunnel.write().await.take_resp_receiver()
     }
 
     /// Performs a lease refreshing operation.
     pub async fn keep_alive(&mut self, req: LeaseKeepAliveRequest) {
         self.keep_alive_tunnel
             .write()
-            .unwrap()
+            .await
             .req_sender
             .send(req)
             .unwrap();
