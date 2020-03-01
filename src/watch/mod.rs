@@ -17,7 +17,7 @@
 //!     }).await?;
 //!
 //!     // print out all received watch responses
-//!     let mut inbound = client.watch(KeyRange::key("foo"));
+//!     let mut inbound = client.watch(KeyRange::key("foo")).await;
 //!     tokio::spawn(async move {
 //!         while let Some(resp) = inbound.next().await {
 //!             println!("watch response: {:?}", resp);
@@ -40,10 +40,11 @@
 mod watch;
 pub use watch::{WatchRequest, WatchResponse};
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use tokio::stream::Stream;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
+use tokio::sync::RwLock;
 use tonic::transport::Channel;
 
 use crate::proto::etcdserverpb;
@@ -120,11 +121,11 @@ impl Watch {
     }
 
     /// Performs a watch operation.
-    pub fn watch(
+    pub async fn watch(
         &mut self,
         key_range: KeyRange,
     ) -> impl Stream<Item = Result<WatchResponse, tonic::Status>> {
-        let mut tunnel = self.tunnel.write().unwrap();
+        let mut tunnel = self.tunnel.write().await;
         tunnel
             .req_sender
             .send(WatchRequest::create(key_range))

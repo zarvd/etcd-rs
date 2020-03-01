@@ -11,7 +11,7 @@ async fn grant_lease(client: &Client) -> Result<()> {
 
     {
         // watch key modification
-        let mut inbound = client.watch(KeyRange::key(key));
+        let mut inbound = client.watch(KeyRange::key(key)).await;
         tokio::spawn(async move {
             while let Some(resp) = inbound.next().await {
                 println!("watch response: {:?}", resp);
@@ -46,7 +46,7 @@ async fn keep_alive_lease(client: &Client) -> Result<()> {
 
     {
         // watch key modification
-        let mut inbound = client.watch(KeyRange::key(key));
+        let mut inbound = client.watch(KeyRange::key(key)).await;
         tokio::spawn(async move {
             while let Some(resp) = inbound.next().await {
                 println!("watch response: {:?}", resp);
@@ -64,7 +64,7 @@ async fn keep_alive_lease(client: &Client) -> Result<()> {
 
     {
         // watch keep alive event
-        let mut inbound = client.lease().keep_alive_responses();
+        let mut inbound = client.lease().keep_alive_responses().await;
         tokio::spawn(async move {
             loop {
                 let resp = inbound.next().await.unwrap();

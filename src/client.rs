@@ -143,12 +143,12 @@ impl Client {
     }
 
     /// Perform a watch operation
-    pub fn watch(
+    pub async fn watch(
         &self,
         key_range: KeyRange,
     ) -> impl Stream<Item = Result<WatchResponse, tonic::Status>> {
         let mut client = self.inner.watch_client.clone();
-        client.watch(key_range)
+        client.watch(key_range).await
     }
 
     /// Gets a lease client.
