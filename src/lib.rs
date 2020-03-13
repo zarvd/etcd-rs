@@ -80,4 +80,4 @@ pub use lease::{
 pub use response_header::ResponseHeader;
 pub use watch::{Event, EventType, Watch, WatchRequest, WatchResponse};
 
-pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync + 'static>>;
