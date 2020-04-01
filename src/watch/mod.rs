@@ -47,8 +47,12 @@ pub use watch::{WatchRequest, WatchResponse};
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use futures::future::FutureExt;
 use tokio::stream::Stream;
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
+use tokio::sync::{
+    mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
+    oneshot,
+};
 use tonic::transport::Channel;
 
 use crate::lazy::{Lazy, Shutdown};
@@ -64,6 +68,7 @@ use crate::Result as Res;
 struct WatchTunnel {
     req_sender: UnboundedSender<WatchRequest>,
     resp_receiver: Option<UnboundedReceiver<Result<WatchResponse, tonic::Status>>>,
+    shutdown: Option<oneshot::Sender<()>>,
 }
 
 impl WatchTunnel {
@@ -79,12 +84,21 @@ impl WatchTunnel {
             }
         });
 
+        let (shutdown_tx, shutdown_rx) = oneshot::channel();
+
         // monitor inbound watch response and transfer to the receiver
         tokio::spawn(async move {
-            let mut inbound = client.watch(request).await.unwrap().into_inner();
+            let mut shutdown_rx = shutdown_rx.fuse();
+            let mut inbound = futures::select! {
+                res = client.watch(request).fuse() => res.unwrap().into_inner(),
+                _ = shutdown_rx => { return; },
+            };
 
             loop {
-                let resp = inbound.message().await;
+                let resp = futures::select! {
+                    resp = inbound.message().fuse() => resp,
+                    _ = shutdown_rx => { return; },
+                };
                 match resp {
                     Ok(Some(resp)) => {
                         resp_sender.send(Ok(From::from(resp))).unwrap();
@@ -102,6 +116,7 @@ impl WatchTunnel {
         Self {
             req_sender,
             resp_receiver: Some(resp_receiver),
+            shutdown: Some(shutdown_tx),
         }
     }
 
@@ -115,8 +130,12 @@ impl WatchTunnel {
 #[async_trait]
 impl Shutdown for WatchTunnel {
     async fn shutdown(&mut self) -> Res<()> {
-        // TODO(zjn): actually shut down the watch tunnel
-        println!("shutting down...");
+        match self.shutdown.take() {
+            Some(shutdown) => {
+                shutdown.send(()).map_err(|_| "Shutdown failed.")?;
+            }
+            None => { /* Already shutdown. This shouldn't happen but it is okay. */ }
+        }
         Ok(())
     }
 }

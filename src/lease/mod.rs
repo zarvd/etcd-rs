@@ -70,8 +70,12 @@ pub use revoke::{LeaseRevokeRequest, LeaseRevokeResponse};
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use futures::future::FutureExt;
 use tokio::stream::Stream;
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
+use tokio::sync::{
+    mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
+    oneshot,
+};
 use tonic::transport::Channel;
 
 use crate::lazy::{Lazy, Shutdown};
@@ -84,6 +88,7 @@ use crate::Result as Res;
 struct LeaseKeepAliveTunnel {
     req_sender: UnboundedSender<LeaseKeepAliveRequest>,
     resp_receiver: Option<UnboundedReceiver<Result<LeaseKeepAliveResponse, tonic::Status>>>,
+    shutdown: Option<oneshot::Sender<()>>,
 }
 
 impl LeaseKeepAliveTunnel {
@@ -91,6 +96,8 @@ impl LeaseKeepAliveTunnel {
         let (req_sender, mut req_receiver) = unbounded_channel::<LeaseKeepAliveRequest>();
         let (resp_sender, resp_receiver) =
             unbounded_channel::<Result<LeaseKeepAliveResponse, tonic::Status>>();
+
+        let (shutdown_tx, shutdown_rx) = oneshot::channel();
 
         let request = tonic::Request::new(async_stream::stream! {
             while let Some(req) = req_receiver.recv().await {
@@ -101,10 +108,17 @@ impl LeaseKeepAliveTunnel {
 
         // monitor inbound watch response and transfer to the receiver
         tokio::spawn(async move {
-            let mut inbound = client.lease_keep_alive(request).await.unwrap().into_inner();
+            let mut shutdown_rx = shutdown_rx.fuse();
+            let mut inbound = futures::select! {
+                res = client.lease_keep_alive(request).fuse() => res.unwrap().into_inner(),
+                _ = shutdown_rx => { println!("shutting1 down"); return; }
+            };
 
             loop {
-                let resp = inbound.message().await;
+                let resp = futures::select! {
+                    resp = inbound.message().fuse() => resp,
+                    _ = shutdown_rx => { println!("shutting down"); return; }
+                };
                 match resp {
                     Ok(Some(resp)) => {
                         resp_sender.send(Ok(From::from(resp))).unwrap();
@@ -122,6 +136,7 @@ impl LeaseKeepAliveTunnel {
         Self {
             req_sender,
             resp_receiver: Some(resp_receiver),
+            shutdown: Some(shutdown_tx),
         }
     }
 
@@ -137,8 +152,12 @@ impl LeaseKeepAliveTunnel {
 #[async_trait]
 impl Shutdown for LeaseKeepAliveTunnel {
     async fn shutdown(&mut self) -> Res<()> {
-        // TODO(zjn): actually shut down the lease tunnel
-        println!("shutting down...");
+        match self.shutdown.take() {
+            Some(shutdown) => {
+                shutdown.send(()).map_err(|_| "Shutdown failed.")?;
+            }
+            None => { /* Already shutdown. This shouldn't happen but it is okay. */ }
+        }
         Ok(())
     }
 }
