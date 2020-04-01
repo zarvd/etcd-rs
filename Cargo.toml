@@ -16,6 +16,7 @@ bytes = "0.5"
 prost = "0.6"
 tokio = { version = "0.2", features = ["stream"] }
 async-stream = "0.2"
+async-trait = "0.1.27"
 
 [dev-dependencies]
 tokio = { version = "0.2", features = ["full"] }

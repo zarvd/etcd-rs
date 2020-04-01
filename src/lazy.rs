@@ -1,6 +1,10 @@
 #![allow(dead_code)]
 use std::ops::{Deref, DerefMut};
+
+use async_trait::async_trait;
 use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
+
+use crate::Result;
 
 /// A lock over lazily-instantiated data.
 ///
@@ -59,6 +63,28 @@ impl<T> Lazy<T> {
             lock.replace(value);
         }
         LazyWriteGuard::new(lock)
+    }
+}
+
+/// Trait for values that can be asynchrously cleaned up.
+#[async_trait]
+pub trait Shutdown {
+    /// Clean up `self`.
+    ///
+    /// Somewhat analogous to `Drop`, but with a few key differences:
+    /// - `shutdown()` is async
+    /// - doesn't happen automatically
+    async fn shutdown(&mut self) -> Result<()>;
+}
+
+impl<T: Shutdown> Lazy<T> {
+    pub async fn evict(&self) -> Result<()> {
+        let mut lock = self.inner.write().await;
+        if let Some(value) = lock.as_mut() {
+            value.shutdown().await?;
+        }
+        lock.take();
+        Ok(())
     }
 }
 
@@ -139,6 +165,9 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
 
+    /// Ordering for atomic loads/stores.
+    ///
+    /// It's arbitrary, as we don't run >1 task at a time in these tests.
     const ORDER: Ordering = Ordering::SeqCst;
 
     /// Test getting a read lock from a `Lazy`.
@@ -194,5 +223,73 @@ mod tests {
         let lock = lazy.read().await;
         assert_eq!(calls.load(ORDER), 1, "Expected thunk *still* called once.");
         assert_eq!(*lock, false, "Expected read() to have been changed.");
+    }
+
+    #[tokio::test]
+    async fn test_lock_evict() {
+        let init_calls = Arc::new(AtomicUsize::default());
+        let shutdown_calls = Arc::new(AtomicUsize::default());
+
+        struct Test {
+            shutdown: Arc<AtomicUsize>,
+        };
+
+        #[async_trait]
+        impl Shutdown for Test {
+            async fn shutdown(&mut self) -> Result<()> {
+                self.shutdown.fetch_add(1, ORDER);
+                Ok(())
+            }
+        }
+
+        let lazy = {
+            let shutdown_calls = shutdown_calls.clone();
+            let init_calls = init_calls.clone();
+            Lazy::new(move || {
+                init_calls.fetch_add(1, ORDER);
+                Test {
+                    shutdown: shutdown_calls.clone(),
+                }
+            })
+        };
+        assert_eq!(init_calls.load(ORDER), 0, "Expected init not called.");
+        assert_eq!(
+            shutdown_calls.load(ORDER),
+            0,
+            "Expected shutdown not called."
+        );
+
+        {
+            let lock = lazy.read().await;
+            let _: Test = *lock;
+            assert_eq!(init_calls.load(ORDER), 1, "Expected init called once.");
+            assert_eq!(
+                shutdown_calls.load(ORDER),
+                0,
+                "Expected shutdown not called."
+            );
+        }
+
+        lazy.evict().await.expect("eviction should not fail");
+
+        {
+            let lock = lazy.read().await;
+            let _: Test = *lock;
+            assert_eq!(init_calls.load(ORDER), 2, "Expected init called twice.");
+            assert_eq!(
+                shutdown_calls.load(ORDER),
+                1,
+                "Expected shutdown called once."
+            );
+        }
+
+        // Two evictions in a row
+        lazy.evict().await.expect("eviction should not fail");
+        lazy.evict().await.expect("eviction should not fail"); // should be a no-op
+        assert_eq!(
+            init_calls.load(ORDER),
+            2,
+            "Expected init *still* called twice."
+        );
     }
 }
