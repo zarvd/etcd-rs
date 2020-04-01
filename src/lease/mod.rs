@@ -67,9 +67,9 @@ use std::sync::Arc;
 
 use tokio::stream::Stream;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
-use tokio::sync::RwLock;
 use tonic::transport::Channel;
 
+use crate::lazy::Lazy;
 use crate::proto::etcdserverpb;
 use crate::proto::etcdserverpb::lease_client::LeaseClient;
 use crate::Result as Res;
@@ -133,12 +133,15 @@ impl LeaseKeepAliveTunnel {
 #[derive(Clone)]
 pub struct Lease {
     client: LeaseClient<Channel>,
-    keep_alive_tunnel: Arc<RwLock<LeaseKeepAliveTunnel>>,
+    keep_alive_tunnel: Arc<Lazy<LeaseKeepAliveTunnel>>,
 }
 
 impl Lease {
     pub(crate) fn new(client: LeaseClient<Channel>) -> Self {
-        let keep_alive_tunnel = Arc::new(RwLock::new(LeaseKeepAliveTunnel::new(client.clone())));
+        let keep_alive_tunnel = {
+            let client = client.clone();
+            Arc::new(Lazy::new(move || LeaseKeepAliveTunnel::new(client.clone())))
+        };
         Self {
             client,
             keep_alive_tunnel,

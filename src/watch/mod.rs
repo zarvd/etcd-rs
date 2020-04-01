@@ -44,9 +44,9 @@ use std::sync::Arc;
 
 use tokio::stream::Stream;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
-use tokio::sync::RwLock;
 use tonic::transport::Channel;
 
+use crate::lazy::Lazy;
 use crate::proto::etcdserverpb;
 use crate::proto::etcdserverpb::watch_client::WatchClient;
 use crate::proto::mvccpb;
@@ -110,12 +110,15 @@ impl WatchTunnel {
 #[derive(Clone)]
 pub struct Watch {
     client: WatchClient<Channel>,
-    tunnel: Arc<RwLock<WatchTunnel>>,
+    tunnel: Arc<Lazy<WatchTunnel>>,
 }
 
 impl Watch {
     pub(crate) fn new(client: WatchClient<Channel>) -> Self {
-        let tunnel = Arc::new(RwLock::new(WatchTunnel::new(client.clone())));
+        let tunnel = {
+            let client = client.clone();
+            Arc::new(Lazy::new(move || WatchTunnel::new(client.clone())))
+        };
 
         Self { client, tunnel }
     }
