@@ -52,6 +52,10 @@
 //!         }
 //!     }
 //!
+//!     // not necessary, but will cleanly shut down the long-running tasks
+//!     // spawned by the client
+//!     client.shutdown().await;
+//!
 //!     Ok(())
 //! }
 //! ```
@@ -65,11 +69,12 @@ pub use revoke::{LeaseRevokeRequest, LeaseRevokeResponse};
 
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use tokio::stream::Stream;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tonic::transport::Channel;
 
-use crate::lazy::Lazy;
+use crate::lazy::{Lazy, Shutdown};
 use crate::proto::etcdserverpb;
 use crate::proto::etcdserverpb::lease_client::LeaseClient;
 use crate::Result as Res;
@@ -129,6 +134,15 @@ impl LeaseKeepAliveTunnel {
     }
 }
 
+#[async_trait]
+impl Shutdown for LeaseKeepAliveTunnel {
+    async fn shutdown(&mut self) -> Res<()> {
+        // TODO(zjn): actually shut down the lease tunnel
+        println!("shutting down...");
+        Ok(())
+    }
+}
+
 /// Lease client.
 #[derive(Clone)]
 pub struct Lease {
@@ -183,5 +197,12 @@ impl Lease {
             .req_sender
             .send(req)
             .unwrap();
+    }
+
+    /// Shut down the running lease task, if any.
+    pub async fn shutdown(&mut self) -> Res<()> {
+        // If we implemented `Shutdown` for this, callers would need it in scope in
+        // order to call this method.
+        self.keep_alive_tunnel.evict().await
     }
 }

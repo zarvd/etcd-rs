@@ -32,6 +32,10 @@
 //!         .delete(DeleteRequest::new(KeyRange::key(key)))
 //!         .await?;
 //!
+//!     // not necessary, but will cleanly shut down the long-running tasks
+//!     // spawned by the client
+//!     client.shutdown().await;
+//!
 //!     Ok(())
 //! }
 //!
@@ -42,16 +46,18 @@ pub use watch::{WatchRequest, WatchResponse};
 
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use tokio::stream::Stream;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tonic::transport::Channel;
 
-use crate::lazy::Lazy;
+use crate::lazy::{Lazy, Shutdown};
 use crate::proto::etcdserverpb;
 use crate::proto::etcdserverpb::watch_client::WatchClient;
 use crate::proto::mvccpb;
 use crate::KeyRange;
 use crate::KeyValue;
+use crate::Result as Res;
 
 /// WatchTunnel is a reusable connection for `Watch` operation
 /// The underlying gRPC method is Bi-directional streaming
@@ -106,6 +112,15 @@ impl WatchTunnel {
     }
 }
 
+#[async_trait]
+impl Shutdown for WatchTunnel {
+    async fn shutdown(&mut self) -> Res<()> {
+        // TODO(zjn): actually shut down the watch tunnel
+        println!("shutting down...");
+        Ok(())
+    }
+}
+
 /// Watch client.
 #[derive(Clone)]
 pub struct Watch {
@@ -134,6 +149,13 @@ impl Watch {
             .send(WatchRequest::create(key_range))
             .unwrap();
         tunnel.take_resp_receiver()
+    }
+
+    /// Shut down the running watch task, if any.
+    pub async fn shutdown(&mut self) -> Res<()> {
+        // If we implemented `Shutdown` for this, callers would need it in scope in
+        // order to call this method.
+        self.tunnel.evict().await
     }
 }
 

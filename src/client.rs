@@ -155,4 +155,13 @@ impl Client {
     pub fn lease(&self) -> Lease {
         self.inner.lease_client.clone()
     }
+
+    /// Shut down any running tasks.
+    pub async fn shutdown(&self) -> Res<()> {
+        let mut watch_client = self.inner.watch_client.clone();
+        watch_client.shutdown().await?;
+        let mut lease_client = self.inner.lease_client.clone();
+        lease_client.shutdown().await?;
+        Ok(())
+    }
 }

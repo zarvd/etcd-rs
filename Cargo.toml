@@ -20,6 +20,7 @@ async-trait = "0.1.27"
 
 [dev-dependencies]
 tokio = { version = "0.2", features = ["full"] }
+futures = "0.3.4"
 
 [build-dependencies.tonic-build]
 version = "0.1"

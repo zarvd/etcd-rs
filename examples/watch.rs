@@ -37,5 +37,7 @@ async fn main() -> Result<()> {
 
     watch(&client).await?;
 
+    client.shutdown().await?;
+
     Ok(())
 }
