@@ -2,8 +2,9 @@ language: rust
 rust:
   - 1.39.0
   - 1.40.0
+  - 1.41.0
+  - 1.42.0
   - stable
-  - nightly
 
 before_script:
   - rustup component add rustfmt-preview
