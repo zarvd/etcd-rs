@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use futures::future::FutureExt;
 use tokio::stream::StreamExt;
 
 use etcd_rs::*;
@@ -67,9 +68,15 @@ async fn keep_alive_lease(client: &Client) -> Result<()> {
         let mut inbound = client.lease().keep_alive_responses().await;
         tokio::spawn(async move {
             loop {
-                let resp = inbound.next().await.unwrap();
-                println!("=====>");
-                println!("keep alive response: {:?}", resp);
+                match inbound.next().await {
+                    Some(resp) => {
+                        println!("=====>");
+                        println!("keep alive response: {:?}", resp);
+                    }
+                    None => {
+                        break;
+                    }
+                }
             }
         });
     }
@@ -112,7 +119,15 @@ async fn main() -> Result<()> {
     .await?;
 
     // grant_lease(&client).await?;
-    keep_alive_lease(&client).await?;
+
+    {
+        let client = client.clone();
+        tokio::task::spawn(async move { keep_alive_lease(&client).await });
+    }
+
+    tokio::signal::ctrl_c()
+        .then(|_| async { client.shutdown().await })
+        .await?;
 
     Ok(())
 }

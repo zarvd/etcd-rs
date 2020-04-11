@@ -32,6 +32,10 @@
 //!         .delete(DeleteRequest::new(KeyRange::key(key)))
 //!         .await?;
 //!
+//!     // not necessary, but will cleanly shut down the long-running tasks
+//!     // spawned by the client
+//!     client.shutdown().await;
+//!
 //!     Ok(())
 //! }
 //!
@@ -42,22 +46,29 @@ pub use watch::{WatchRequest, WatchResponse};
 
 use std::sync::Arc;
 
+use async_trait::async_trait;
+use futures::future::FutureExt;
 use tokio::stream::Stream;
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
-use tokio::sync::RwLock;
+use tokio::sync::{
+    mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
+    oneshot,
+};
 use tonic::transport::Channel;
 
+use crate::lazy::{Lazy, Shutdown};
 use crate::proto::etcdserverpb;
 use crate::proto::etcdserverpb::watch_client::WatchClient;
 use crate::proto::mvccpb;
 use crate::KeyRange;
 use crate::KeyValue;
+use crate::Result as Res;
 
 /// WatchTunnel is a reusable connection for `Watch` operation
 /// The underlying gRPC method is Bi-directional streaming
 struct WatchTunnel {
     req_sender: UnboundedSender<WatchRequest>,
     resp_receiver: Option<UnboundedReceiver<Result<WatchResponse, tonic::Status>>>,
+    shutdown: Option<oneshot::Sender<()>>,
 }
 
 impl WatchTunnel {
@@ -73,12 +84,21 @@ impl WatchTunnel {
             }
         });
 
+        let (shutdown_tx, shutdown_rx) = oneshot::channel();
+
         // monitor inbound watch response and transfer to the receiver
         tokio::spawn(async move {
-            let mut inbound = client.watch(request).await.unwrap().into_inner();
+            let mut shutdown_rx = shutdown_rx.fuse();
+            let mut inbound = futures::select! {
+                res = client.watch(request).fuse() => res.unwrap().into_inner(),
+                _ = shutdown_rx => { return; },
+            };
 
             loop {
-                let resp = inbound.message().await;
+                let resp = futures::select! {
+                    resp = inbound.message().fuse() => resp,
+                    _ = shutdown_rx => { return; },
+                };
                 match resp {
                     Ok(Some(resp)) => {
                         resp_sender.send(Ok(From::from(resp))).unwrap();
@@ -96,6 +116,7 @@ impl WatchTunnel {
         Self {
             req_sender,
             resp_receiver: Some(resp_receiver),
+            shutdown: Some(shutdown_tx),
         }
     }
 
@@ -106,16 +127,32 @@ impl WatchTunnel {
     }
 }
 
+#[async_trait]
+impl Shutdown for WatchTunnel {
+    async fn shutdown(&mut self) -> Res<()> {
+        match self.shutdown.take() {
+            Some(shutdown) => {
+                shutdown.send(()).map_err(|_| "Shutdown failed.")?;
+            }
+            None => { /* Already shutdown. This shouldn't happen but it is okay. */ }
+        }
+        Ok(())
+    }
+}
+
 /// Watch client.
 #[derive(Clone)]
 pub struct Watch {
     client: WatchClient<Channel>,
-    tunnel: Arc<RwLock<WatchTunnel>>,
+    tunnel: Arc<Lazy<WatchTunnel>>,
 }
 
 impl Watch {
     pub(crate) fn new(client: WatchClient<Channel>) -> Self {
-        let tunnel = Arc::new(RwLock::new(WatchTunnel::new(client.clone())));
+        let tunnel = {
+            let client = client.clone();
+            Arc::new(Lazy::new(move || WatchTunnel::new(client.clone())))
+        };
 
         Self { client, tunnel }
     }
@@ -131,6 +168,13 @@ impl Watch {
             .send(WatchRequest::create(key_range))
             .unwrap();
         tunnel.take_resp_receiver()
+    }
+
+    /// Shut down the running watch task, if any.
+    pub async fn shutdown(&mut self) -> Res<()> {
+        // If we implemented `Shutdown` for this, callers would need it in scope in
+        // order to call this method.
+        self.tunnel.evict().await
     }
 }
 

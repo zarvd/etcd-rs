@@ -45,6 +45,7 @@
 mod auth;
 mod client;
 mod kv;
+mod lazy;
 mod lease;
 mod response_header;
 mod watch;
