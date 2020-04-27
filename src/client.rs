@@ -9,6 +9,7 @@ use crate::proto::etcdserverpb::{
 };
 use crate::watch::WatchResponse;
 use crate::{Auth, KeyRange, Kv, Lease, Result as Res, Watch};
+use tonic::transport::ClientTlsConfig;
 
 /// Config for establishing etcd client.
 pub struct ClientConfig {
@@ -34,36 +35,34 @@ pub(crate) struct Inner {
 impl Client {
     /// Connects to etcd generate auth token.
     /// The client connection used to request the authentication token is typically thrown away; it cannot carry the new token’s credentials. This is because gRPC doesn’t provide a way for adding per RPC credential after creation of the connection
-    async fn generate_auth_token(endpoints: Vec<String>, auth: (String, String)) -> Res<String> {
+    async fn generate_auth_token(cfg: &ClientConfig) -> Res<Option<String>> {
         use crate::AuthenticateRequest;
 
+        let endpoints = &cfg.endpoints;
         let channel = {
             let endpoints = endpoints
                 .into_iter()
-                .map(|e| Channel::from_shared(e).expect("parse endpoint URI"));
+                .map(|e| Channel::from_shared(e.to_owned()).expect("parse endpoint URI"));
             Channel::balance_list(endpoints)
         };
 
         let mut auth_client = Auth::new(AuthClient::new(channel));
 
-        let (name, password) = auth;
-
-        let resp = auth_client
-            .authenticate(AuthenticateRequest::new(name, password))
-            .await?;
-
-        Ok(resp.token().to_owned())
+        match cfg.auth.as_ref() {
+            Some((name, password)) => {
+                auth_client
+                    .authenticate(AuthenticateRequest::new(name, password))
+                    .await
+                    .and_then(|r| Ok(Some(r.token().to_owned())))
+            }
+            None => Ok(None)
+        }
     }
 
     /// Connects to etcd cluster and returns a client.
     pub async fn connect(cfg: ClientConfig) -> Res<Self> {
         // If authentication provided, geneartes token before connecting.
-        let token = match cfg.auth {
-            Some(auth) => {
-                Some(Self::generate_auth_token(cfg.endpoints.clone(), auth.clone()).await?)
-            }
-            None => None,
-        };
+        let token = Self::generate_auth_token(&cfg).await?;
 
         let auth_interceptor = if let Some(token) = token {
             let token = MetadataValue::from_str(&token).unwrap();
