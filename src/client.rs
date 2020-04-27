@@ -15,6 +15,7 @@ use tonic::transport::ClientTlsConfig;
 pub struct ClientConfig {
     pub endpoints: Vec<String>,
     pub auth: Option<(String, String)>,
+    pub tls: Option<ClientTlsConfig>,
 }
 
 /// Client is an abstraction for grouping etcd operations and managing underlying network communications.
@@ -33,18 +34,26 @@ pub(crate) struct Inner {
 }
 
 impl Client {
+    fn get_channel(cfg: &ClientConfig) -> Channel {
+        let endpoints = &cfg.endpoints;
+        let endpoints = endpoints
+            .into_iter()
+            .map(|e| {
+                let c = Channel::from_shared(e.to_owned()).expect("parse endpoint URI");
+                match &cfg.tls {
+                    Some(tls) => c.tls_config(tls.to_owned()),
+                    None => c
+                }
+            });
+        Channel::balance_list(endpoints)
+    }
+
     /// Connects to etcd generate auth token.
     /// The client connection used to request the authentication token is typically thrown away; it cannot carry the new token’s credentials. This is because gRPC doesn’t provide a way for adding per RPC credential after creation of the connection
     async fn generate_auth_token(cfg: &ClientConfig) -> Res<Option<String>> {
         use crate::AuthenticateRequest;
 
-        let endpoints = &cfg.endpoints;
-        let channel = {
-            let endpoints = endpoints
-                .into_iter()
-                .map(|e| Channel::from_shared(e.to_owned()).expect("parse endpoint URI"));
-            Channel::balance_list(endpoints)
-        };
+        let channel = Self::get_channel(&cfg);
 
         let mut auth_client = Auth::new(AuthClient::new(channel));
 
@@ -75,13 +84,7 @@ impl Client {
             None
         };
 
-        let channel = {
-            let endpoints = cfg
-                .endpoints
-                .into_iter()
-                .map(|e| Channel::from_shared(e).expect("parse endpoint URI"));
-            Channel::balance_list(endpoints)
-        };
+        let channel = Self::get_channel(&cfg);
 
         let inner = {
             let (auth_client, kv_client, watch_client, lease_client) =
