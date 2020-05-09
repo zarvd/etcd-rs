@@ -52,6 +52,7 @@ let endpoints = vec!["http://127.0.0.1:2379".to_owned()];
 let client = Client::connect(ClientConfig {
     endpoints,
     auth: None,
+    tls: None
 }).await;
 ```
 
@@ -63,6 +64,20 @@ let endpoints = vec!["http://127.0.0.1:2379".to_owned()];
 let client = Client::connect(ClientConfig {
     endpoints,
     auth: Some(("user".to_owned(), "password".to_owned())),
+    tls: None
+}).await;
+```
+
+with tls
+
+```rust
+let endpoints = vec!["https://127.0.0.1:2379".to_owned()];
+let tls = ClientTlsConfig::new();
+
+let client = Client::connect(ClientConfig {
+    endpoints,
+    auth: Some(("user".to_owned(), "password".to_owned())),
+    tls: Some(tls)
 }).await;
 ```
 
