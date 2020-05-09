@@ -1,8 +1,8 @@
 use etcd_rs::*;
-use tonic::transport::{ClientTlsConfig, Certificate, Identity};
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
+use tonic::transport::{Certificate, ClientTlsConfig, Identity};
 
 async fn put_and_get(client: &Client) -> Result<()> {
     println!("Put and get a key value pairs");
@@ -11,7 +11,6 @@ async fn put_and_get(client: &Client) -> Result<()> {
     let value = "bar";
 
     {
-
         // Put a key-value pair
         let req = PutRequest::new(key, value);
         println!("Put and ff a key value pairs");
@@ -44,9 +43,18 @@ async fn main() -> Result<()> {
     let mut cert: Vec<u8> = Vec::new();
     let mut key: Vec<u8> = Vec::new();
 
-    File::open(Path::new("ca.pem")).unwrap().read_to_end(&mut ca).unwrap();
-    File::open(Path::new("cert.pem")).unwrap().read_to_end(&mut cert).unwrap();
-    File::open(Path::new("key.pem")).unwrap().read_to_end(&mut key).unwrap();
+    File::open(Path::new("ca.pem"))
+        .unwrap()
+        .read_to_end(&mut ca)
+        .unwrap();
+    File::open(Path::new("cert.pem"))
+        .unwrap()
+        .read_to_end(&mut cert)
+        .unwrap();
+    File::open(Path::new("key.pem"))
+        .unwrap()
+        .read_to_end(&mut key)
+        .unwrap();
 
     let tls = ClientTlsConfig::new();
     let tls = tls.ca_certificate(Certificate::from_pem(ca));
@@ -57,7 +65,7 @@ async fn main() -> Result<()> {
         auth: None,
         tls: Some(tls),
     })
-        .await?;
+    .await?;
 
     put_and_get(&client).await?;
 

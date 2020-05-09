@@ -36,15 +36,13 @@ pub(crate) struct Inner {
 impl Client {
     fn get_channel(cfg: &ClientConfig) -> Channel {
         let endpoints = &cfg.endpoints;
-        let endpoints = endpoints
-            .into_iter()
-            .map(|e| {
-                let c = Channel::from_shared(e.to_owned()).expect("parse endpoint URI");
-                match &cfg.tls {
-                    Some(tls) => c.tls_config(tls.to_owned()),
-                    None => c
-                }
-            });
+        let endpoints = endpoints.into_iter().map(|e| {
+            let c = Channel::from_shared(e.to_owned()).expect("parse endpoint URI");
+            match &cfg.tls {
+                Some(tls) => c.tls_config(tls.to_owned()),
+                None => c,
+            }
+        });
         Channel::balance_list(endpoints)
     }
 
@@ -58,13 +56,11 @@ impl Client {
         let mut auth_client = Auth::new(AuthClient::new(channel));
 
         match cfg.auth.as_ref() {
-            Some((name, password)) => {
-                auth_client
-                    .authenticate(AuthenticateRequest::new(name, password))
-                    .await
-                    .and_then(|r| Ok(Some(r.token().to_owned())))
-            }
-            None => Ok(None)
+            Some((name, password)) => auth_client
+                .authenticate(AuthenticateRequest::new(name, password))
+                .await
+                .and_then(|r| Ok(Some(r.token().to_owned()))),
+            None => Ok(None),
         }
     }
 
