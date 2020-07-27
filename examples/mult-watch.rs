@@ -1,4 +1,5 @@
 use tokio::stream::StreamExt;
+use tokio::time::{delay_for, Duration};
 
 use etcd_rs::*;
 
@@ -11,18 +12,25 @@ async fn watch(client: &mut Client) -> Result<()> {
         // print out all received watch responses
         tokio::spawn(async move {
             while let Some(resp) = inbound.next().await {
-                println!("watch response: {:?}", resp);
+                println!("watch foo response: {:?}", resp);
             }
-        });
-    }
+        })
+    };
 
-    let key = "foo";
-    client.kv().put(PutRequest::new(key, "bar")).await?;
-    client.kv().put(PutRequest::new(key, "baz")).await?;
-    client
-        .kv()
-        .delete(DeleteRequest::new(KeyRange::key(key)))
-        .await?;
+    {
+        let mut inbound = client.watch(KeyRange::key("foo2")).await;
+
+        tokio::spawn(async move {
+            while let Some(resp) = inbound.next().await {
+                println!("watch foo2 response: {:?}", resp);
+            }
+        })
+    };
+
+    client.kv().put(PutRequest::new("foo", "bar")).await?;
+    client.kv().put(PutRequest::new("foo2", "baz")).await?;
+
+    delay_for(Duration::from_millis(1000)).await;
 
     Ok(())
 }

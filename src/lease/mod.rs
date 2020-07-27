@@ -40,8 +40,6 @@
 //!
 //!     {
 //!         // keep alive the lease every 1 second
-//!         let client = client.clone();
-//!
 //!         let mut interval = tokio::time::interval(Duration::from_secs(1));
 //!
 //!         loop {

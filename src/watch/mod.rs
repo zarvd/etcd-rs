@@ -11,7 +11,7 @@
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<()> {
-//!     let client = Client::connect(ClientConfig {
+//!     let mut client = Client::connect(ClientConfig {
 //!         endpoints: vec!["http://127.0.0.1:2379".to_owned()],
 //!         auth: None,
 //!         tls: None,
@@ -73,7 +73,7 @@ struct WatchTunnel {
 }
 
 impl WatchTunnel {
-    fn new(mut client: WatchClient<Channel>) -> Self {
+    fn new(client: Arc<RwLock<WatchClient<Channel>>>) -> Self {
         let (req_sender, mut req_receiver) = unbounded_channel::<WatchRequest>();
         let (resp_sender, resp_receiver) =
             unbounded_channel::<Result<WatchResponse, tonic::Status>>();
@@ -88,11 +88,16 @@ impl WatchTunnel {
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
 
         // monitor inbound watch response and transfer to the receiver
+        let client = client.clone();
         tokio::spawn(async move {
             let mut shutdown_rx = shutdown_rx.fuse();
-            let mut inbound = futures::select! {
-                res = client.watch(request).fuse() => res.unwrap().into_inner(),
-                _ = shutdown_rx => { return; },
+
+            let mut inbound = {
+                let mut client = client.write().await;
+                futures::select! {
+                    res = client.watch(request).fuse() => res.unwrap().into_inner(),
+                    _ = shutdown_rx =>{  return; },
+                }
             };
 
             loop {
@@ -100,6 +105,7 @@ impl WatchTunnel {
                     resp = inbound.message().fuse() => resp,
                     _ = shutdown_rx => { return; },
                 };
+
                 match resp {
                     Ok(Some(resp)) => {
                         resp_sender.send(Ok(From::from(resp))).unwrap();
@@ -141,21 +147,22 @@ impl Shutdown for WatchTunnel {
     }
 }
 
+use tokio::sync::RwLock;
+
 /// Watch client.
 #[derive(Clone)]
 pub struct Watch {
-    client: WatchClient<Channel>,
-    tunnel: Arc<Lazy<WatchTunnel>>,
+    client: Arc<RwLock<WatchClient<Channel>>>,
+    tunnels: Vec<Arc<Lazy<WatchTunnel>>>,
 }
 
 impl Watch {
     pub(crate) fn new(client: WatchClient<Channel>) -> Self {
-        let tunnel = {
-            let client = client.clone();
-            Arc::new(Lazy::new(move || WatchTunnel::new(client.clone())))
-        };
-
-        Self { client, tunnel }
+        let mutex_client = Arc::new(RwLock::new(client.clone()));
+        Self {
+            client: mutex_client,
+            tunnels: vec![],
+        }
     }
 
     /// Performs a watch operation.
@@ -163,7 +170,10 @@ impl Watch {
         &mut self,
         key_range: KeyRange,
     ) -> impl Stream<Item = Result<WatchResponse, tonic::Status>> {
-        let mut tunnel = self.tunnel.write().await;
+        let client = self.client.clone();
+        let tunnel = Arc::new(Lazy::new(move || WatchTunnel::new(client.clone())));
+        self.tunnels.push(tunnel.clone());
+        let mut tunnel = tunnel.write().await;
         tunnel
             .req_sender
             .send(WatchRequest::create(key_range))
@@ -175,7 +185,10 @@ impl Watch {
     pub async fn shutdown(&mut self) -> Res<()> {
         // If we implemented `Shutdown` for this, callers would need it in scope in
         // order to call this method.
-        self.tunnel.evict().await
+        for tunnel in &self.tunnels {
+            tunnel.evict().await?;
+        }
+        Ok(())
     }
 }
 

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use tokio::stream::Stream;
 use tonic::{metadata::MetadataValue, transport::Channel, Interceptor, Request};
 
@@ -19,9 +17,8 @@ pub struct ClientConfig {
 }
 
 /// Client is an abstraction for grouping etcd operations and managing underlying network communications.
-#[derive(Clone)]
 pub struct Client {
-    inner: Arc<Inner>,
+    inner: Inner,
 }
 
 #[allow(dead_code)]
@@ -120,9 +117,7 @@ impl Client {
             }
         };
 
-        Ok(Self {
-            inner: Arc::new(inner),
-        })
+        Ok(Self { inner: inner })
     }
 
     /// Gets an auth client.
@@ -142,10 +137,10 @@ impl Client {
 
     /// Perform a watch operation
     pub async fn watch(
-        &self,
+        &mut self,
         key_range: KeyRange,
     ) -> impl Stream<Item = Result<WatchResponse, tonic::Status>> {
-        let mut client = self.inner.watch_client.clone();
+        let client = &mut self.inner.watch_client;
         client.watch(key_range).await
     }
 
@@ -155,9 +150,8 @@ impl Client {
     }
 
     /// Shut down any running tasks.
-    pub async fn shutdown(&self) -> Res<()> {
-        let mut watch_client = self.inner.watch_client.clone();
-        watch_client.shutdown().await?;
+    pub async fn shutdown(&mut self) -> Res<()> {
+        self.inner.watch_client.shutdown().await?;
         let mut lease_client = self.inner.lease_client.clone();
         lease_client.shutdown().await?;
         Ok(())

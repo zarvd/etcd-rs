@@ -5,14 +5,18 @@ use tokio::stream::StreamExt;
 
 use etcd_rs::*;
 
-async fn grant_lease(client: &Client) -> Result<()> {
+type ArcClient = Arc<RwLock<Client>>;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+
+async fn grant_lease(client: ArcClient) -> Result<()> {
     println!("grant lease");
 
     let key = "foo";
 
     {
         // watch key modification
-        let mut inbound = client.watch(KeyRange::key(key)).await;
+        let mut inbound = client.write().await.watch(KeyRange::key(key)).await;
         tokio::spawn(async move {
             while let Some(resp) = inbound.next().await {
                 println!("watch response: {:?}", resp);
@@ -21,11 +25,15 @@ async fn grant_lease(client: &Client) -> Result<()> {
     }
 
     let lease = client
+        .read()
+        .await
         .lease()
         .grant(LeaseGrantRequest::new(Duration::from_secs(3)))
         .await?;
 
     client
+        .read()
+        .await
         .kv()
         .put({
             let mut req = PutRequest::new(key, "bar");
@@ -40,14 +48,14 @@ async fn grant_lease(client: &Client) -> Result<()> {
     Ok(())
 }
 
-async fn keep_alive_lease(client: &Client) -> Result<()> {
+async fn keep_alive_lease(client: ArcClient) -> Result<()> {
     println!("grant lease and keep alive");
 
     let key = "foo";
 
     {
         // watch key modification
-        let mut inbound = client.watch(KeyRange::key(key)).await;
+        let mut inbound = client.write().await.watch(KeyRange::key(key)).await;
         tokio::spawn(async move {
             while let Some(resp) = inbound.next().await {
                 println!("watch response: {:?}", resp);
@@ -57,6 +65,8 @@ async fn keep_alive_lease(client: &Client) -> Result<()> {
 
     // grant lease
     let lease = client
+        .write()
+        .await
         .lease()
         .grant(LeaseGrantRequest::new(Duration::from_secs(3)))
         .await?;
@@ -65,7 +75,7 @@ async fn keep_alive_lease(client: &Client) -> Result<()> {
 
     {
         // watch keep alive event
-        let mut inbound = client.lease().keep_alive_responses().await;
+        let mut inbound = client.write().await.lease().keep_alive_responses().await;
         tokio::spawn(async move {
             loop {
                 match inbound.next().await {
@@ -83,6 +93,8 @@ async fn keep_alive_lease(client: &Client) -> Result<()> {
 
     // set lease for key
     client
+        .write()
+        .await
         .kv()
         .put({
             let mut req = PutRequest::new(key, "bar");
@@ -94,20 +106,18 @@ async fn keep_alive_lease(client: &Client) -> Result<()> {
 
     {
         // keep alive the lease every 1 second
-        let client = client.clone();
-
         let mut interval = tokio::time::interval(Duration::from_secs(1));
 
         loop {
             interval.tick().await;
             client
+                .write()
+                .await
                 .lease()
                 .keep_alive(LeaseKeepAliveRequest::new(lease_id))
                 .await;
         }
     }
-
-    Ok(())
 }
 
 #[tokio::main]
@@ -119,16 +129,23 @@ async fn main() -> Result<()> {
     })
     .await?;
 
-    // grant_lease(&client).await?;
+    let client = Arc::new(RwLock::new(client));
 
     {
         let client = client.clone();
-        tokio::task::spawn(async move { keep_alive_lease(&client).await });
+        grant_lease(client).await?;
     }
 
-    tokio::signal::ctrl_c()
-        .then(|_| async { client.shutdown().await })
-        .await?;
+    {
+        let client = client.clone();
+        tokio::task::spawn(async move { keep_alive_lease(client).await });
+    }
+
+    {
+        tokio::signal::ctrl_c()
+            .then(|_| async { client.write().await.shutdown().await })
+            .await?;
+    }
 
     Ok(())
 }
