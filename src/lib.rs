@@ -73,7 +73,7 @@ pub use auth::{Auth, AuthenticateRequest, AuthenticateResponse};
 pub use client::{Client, ClientConfig};
 pub use kv::{
     DeleteRequest, DeleteResponse, KeyRange, KeyValue, Kv, PutRequest, PutResponse, RangeRequest,
-    RangeResponse, TxnCmp, TxnRequest, TxnResponse,
+    RangeResponse, TxnCmp, TxnOpResponse, TxnRequest, TxnResponse,
 };
 pub use lease::{
     Lease, LeaseGrantRequest, LeaseGrantResponse, LeaseKeepAliveRequest, LeaseKeepAliveResponse,
