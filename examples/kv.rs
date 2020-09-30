@@ -100,7 +100,11 @@ async fn put_and_get(client: &Client) -> Result<()> {
 #[tokio::main]
 async fn main() -> Result<()> {
     let client = Client::connect(ClientConfig {
-        endpoints: vec!["http://127.0.0.1:2379".to_owned()],
+        endpoints: vec![
+            "http://127.0.0.1:12379".to_owned(),
+            "http://127.0.0.1:22379".to_owned(),
+            "http://127.0.0.1:32379".to_owned(),
+        ],
         auth: None,
         tls: None,
     })
