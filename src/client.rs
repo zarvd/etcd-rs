@@ -146,10 +146,7 @@ impl Client {
     }
 
     /// Perform a watch operation
-    pub async fn watch(
-        &self,
-        key_range: KeyRange,
-    ) -> impl Stream<Item = Result<WatchResponse>> {
+    pub async fn watch(&self, key_range: KeyRange) -> impl Stream<Item = Result<WatchResponse>> {
         let mut client = self.inner.watch_client.clone();
         client.watch(key_range).await
     }

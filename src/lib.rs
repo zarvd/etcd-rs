@@ -1,11 +1,14 @@
-#![allow(clippy::suspicious_op_assign_impl, clippy::suspicious_arithmetic_impl,clippy::module_inception)]
+#![allow(
+    clippy::suspicious_op_assign_impl,
+    clippy::suspicious_arithmetic_impl,
+    clippy::module_inception
+)]
 #![deny(
-clippy::clone_on_ref_ptr,
-clippy::dbg_macro,
-clippy::enum_glob_use,
-clippy::get_unwrap,
-clippy::macro_use_imports,
-clippy::missing_errors_doc
+    clippy::clone_on_ref_ptr,
+    clippy::dbg_macro,
+    clippy::enum_glob_use,
+    clippy::get_unwrap,
+    clippy::macro_use_imports
 )]
 
 //! An asynchronously etcd client for Rust.
@@ -73,8 +76,8 @@ mod error;
 mod kv;
 mod lazy;
 mod lease;
+mod proto;
 mod response_header;
 mod watch;
-mod proto;
 
 pub type Result<T> = std::result::Result<T, Error>;

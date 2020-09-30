@@ -122,8 +122,7 @@ impl LeaseKeepAliveTunnel {
                 };
                 match resp {
                     Ok(Some(resp)) => {
-                        resp_sender
-                            .send(Ok(From::from(resp))).unwrap();
+                        resp_sender.send(Ok(From::from(resp))).unwrap();
                     }
                     Ok(None) => {
                         return;
@@ -150,11 +149,8 @@ impl LeaseKeepAliveTunnel {
 #[async_trait]
 impl Shutdown for LeaseKeepAliveTunnel {
     async fn shutdown(&mut self) -> Result<()> {
-        match self.shutdown.take() {
-            Some(shutdown) => {
-                shutdown.send(()).map_err(|_| Error::ChannelClosed)?;
-            }
-            None => { /* Already shutdown. This shouldn't happen but it is okay. */ }
+        if let Some(shutdown) = self.shutdown.take() {
+            shutdown.send(()).map_err(|_| Error::ChannelClosed)?;
         }
         Ok(())
     }

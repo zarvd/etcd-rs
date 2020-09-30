@@ -76,8 +76,7 @@ struct WatchTunnel {
 impl WatchTunnel {
     fn new(mut client: WatchClient<Channel>) -> Self {
         let (req_sender, mut req_receiver) = unbounded_channel::<WatchRequest>();
-        let (resp_sender, resp_receiver) =
-            unbounded_channel::<Result<WatchResponse>>();
+        let (resp_sender, resp_receiver) = unbounded_channel::<Result<WatchResponse>>();
 
         let request = tonic::Request::new(async_stream::stream! {
             while let Some(req) = req_receiver.recv().await {
@@ -123,20 +122,15 @@ impl WatchTunnel {
     }
 
     fn take_resp_receiver(&mut self) -> UnboundedReceiver<Result<WatchResponse>> {
-        self.resp_receiver
-            .take()
-            .unwrap()
+        self.resp_receiver.take().unwrap()
     }
 }
 
 #[async_trait]
 impl Shutdown for WatchTunnel {
     async fn shutdown(&mut self) -> Result<()> {
-        match self.shutdown.take() {
-            Some(shutdown) => {
-                shutdown.send(()).map_err(|_| Error::ChannelClosed)?;
-            }
-            None => { /* Already shutdown. This shouldn't happen but it is okay. */ }
+        if let Some(shutdown) = self.shutdown.take() {
+            shutdown.send(()).map_err(|_| Error::ChannelClosed)?;
         }
         Ok(())
     }
