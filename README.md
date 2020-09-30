@@ -6,7 +6,7 @@ etcd for Rust
 [![License][license-badge]][license-url]
 
 [ci-badge]: https://img.shields.io/github/workflow/status/luncj/etcd-rs/CI?style=flat-square
-[ci-url]: https://gitihub.com/luncj/etcd-rs/actions
+[ci-url]: https://github.com/luncj/etcd-rs/actions
 [crates-badge]: https://img.shields.io/crates/v/etcd-rs.svg?style=flat-square
 [crates-url]: https://crates.io/crates/etcd-rs
 [license-badge]: https://img.shields.io/github/license/luncj/etcd-rs.svg?style=flat-square
