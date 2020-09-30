@@ -1,22 +1,16 @@
 etcd for Rust
 ====
 
+[![CI Status][ci-badge]][ci-url]
 [![Crates.io][crates-badge]][crates-url]
-[![Docs.rs][docs-badge]][docs-url]
-[![MIT licensed][mit-badge]][mit-url]
-[![Travis Build Status][travis-badge]][travis-url]
-[![Dependency Status][deps-badge]][deps-url]
+[![License][license-badge]][license-url]
 
-[crates-badge]: https://img.shields.io/crates/v/etcd-rs.svg
+[ci-badge]: https://img.shields.io/github/workflow/status/luncj/etcd-rs/CI?style=flat-square
+[ci-url]: https://gitihub.com/luncj/etcd-rs/actions
+[crates-badge]: https://img.shields.io/crates/v/etcd-rs.svg?style=flat-square
 [crates-url]: https://crates.io/crates/etcd-rs
-[docs-badge]: https://docs.rs/etcd-rs/badge.svg
-[docs-url]: https://docs.rs/etcd-rs
-[mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
-[mit-url]: LICENSE-MIT
-[travis-badge]: https://travis-ci.org/luncj/etcd-rs.svg?branch=master
-[travis-url]: https://travis-ci.org/luncj/etcd-rs
-[deps-badge]: https://deps.rs/repo/github/luncj/etcd-rs/status.svg
-[deps-url]: https://deps.rs/repo/github/luncj/etcd-rs
+[license-badge]: https://img.shields.io/github/license/luncj/etcd-rs.svg?style=flat-square
+[license-url]: https://github.com/luncj/etcd-rs/blob/master/LICENSE
 
 
 An [etcd](https://github.com/etcd-io/etcd)(API v3) client for Rust, and it provides `async/await` APIs backed by [tokio](https://github.com/tokio-rs/tokio) and [tonic](https://github.com/hyperium/tonic).
