@@ -1,3 +1,13 @@
+#![allow(clippy::suspicious_op_assign_impl, clippy::suspicious_arithmetic_impl,clippy::module_inception)]
+#![deny(
+clippy::clone_on_ref_ptr,
+clippy::dbg_macro,
+clippy::enum_glob_use,
+clippy::get_unwrap,
+clippy::macro_use_imports,
+clippy::missing_errors_doc
+)]
+
 //! An asynchronously etcd client for Rust.
 //!
 //! etcd-rs supports etcd v3 API and async/await syntax.
@@ -43,34 +53,9 @@
 //! }
 //! ```
 
-mod auth;
-mod client;
-mod kv;
-mod lazy;
-mod lease;
-mod response_header;
-mod watch;
-
-pub(crate) mod proto {
-    pub(crate) mod mvccpb {
-        tonic::include_proto!("mvccpb");
-    }
-
-    pub(crate) mod authpb {
-        tonic::include_proto!("authpb");
-    }
-
-    pub(crate) mod etcdserverpb {
-        tonic::include_proto!("etcdserverpb");
-    }
-
-    pub(crate) mod v3lockpb {
-        tonic::include_proto!("v3lockpb");
-    }
-}
-
 pub use auth::{Auth, AuthenticateRequest, AuthenticateResponse};
 pub use client::{Client, ClientConfig};
+pub use error::Error;
 pub use kv::{
     DeleteRequest, DeleteResponse, KeyRange, KeyValue, Kv, PutRequest, PutResponse, RangeRequest,
     RangeResponse, TxnCmp, TxnOpResponse, TxnRequest, TxnResponse,
@@ -82,4 +67,14 @@ pub use lease::{
 pub use response_header::ResponseHeader;
 pub use watch::{Event, EventType, Watch, WatchRequest, WatchResponse};
 
-pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync + 'static>>;
+mod auth;
+mod client;
+mod error;
+mod kv;
+mod lazy;
+mod lease;
+mod response_header;
+mod watch;
+mod proto;
+
+pub type Result<T> = std::result::Result<T, Error>;

@@ -9,5 +9,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &["proto/auth.proto", "proto/kv.proto", "proto/rpc.proto"],
         &["proto"],
     )?;
+
     Ok(())
 }
