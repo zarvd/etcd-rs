@@ -102,6 +102,12 @@ impl TxnRequest {
     }
 }
 
+impl Default for TxnRequest {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Into<etcdserverpb::TxnRequest> for TxnRequest {
     fn into(self) -> etcdserverpb::TxnRequest {
         self.proto

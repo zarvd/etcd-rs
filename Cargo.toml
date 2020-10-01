@@ -11,18 +11,18 @@ documentation = "https://docs.rs/etcd-rs"
 license = "MIT"
 
 [dependencies]
-tonic = { version = "0.2", features = ["tls"] }
+tonic = { version = "0.3", features = ["tls"] }
 bytes = "0.5"
 prost = "0.6"
 tokio = { version = "0.2", features = ["stream"] }
 async-stream = "0.2"
-async-trait = "0.1.27"
-futures = "0.3.4"
+async-trait = "0.1"
+futures = "0.3"
+thiserror = "1.0"
+http = "0.2"
 
 [dev-dependencies]
 tokio = { version = "0.2", features = ["full"] }
 
-[build-dependencies.tonic-build]
-version = "0.1"
-default-features = false
-features = ["transport"]
+[build-dependencies]
+tonic-build = "0.3"

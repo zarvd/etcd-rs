@@ -42,9 +42,6 @@
 //!
 //! ```
 
-mod watch;
-pub use watch::{WatchRequest, WatchResponse};
-
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -56,27 +53,30 @@ use tokio::sync::{
 };
 use tonic::transport::Channel;
 
+pub use watch::{WatchRequest, WatchResponse};
+
 use crate::lazy::{Lazy, Shutdown};
 use crate::proto::etcdserverpb;
 use crate::proto::etcdserverpb::watch_client::WatchClient;
 use crate::proto::mvccpb;
-use crate::KeyRange;
 use crate::KeyValue;
-use crate::Result as Res;
+use crate::Result;
+use crate::{Error, KeyRange};
+
+mod watch;
 
 /// WatchTunnel is a reusable connection for `Watch` operation
 /// The underlying gRPC method is Bi-directional streaming
 struct WatchTunnel {
     req_sender: UnboundedSender<WatchRequest>,
-    resp_receiver: Option<UnboundedReceiver<Result<WatchResponse, tonic::Status>>>,
+    resp_receiver: Option<UnboundedReceiver<Result<WatchResponse>>>,
     shutdown: Option<oneshot::Sender<()>>,
 }
 
 impl WatchTunnel {
     fn new(mut client: WatchClient<Channel>) -> Self {
         let (req_sender, mut req_receiver) = unbounded_channel::<WatchRequest>();
-        let (resp_sender, resp_receiver) =
-            unbounded_channel::<Result<WatchResponse, tonic::Status>>();
+        let (resp_sender, resp_receiver) = unbounded_channel::<Result<WatchResponse>>();
 
         let request = tonic::Request::new(async_stream::stream! {
             while let Some(req) = req_receiver.recv().await {
@@ -108,7 +108,7 @@ impl WatchTunnel {
                         return;
                     }
                     Err(e) => {
-                        resp_sender.send(Err(e)).unwrap();
+                        resp_sender.send(Err(From::from(e))).unwrap();
                     }
                 };
             }
@@ -121,21 +121,16 @@ impl WatchTunnel {
         }
     }
 
-    fn take_resp_receiver(&mut self) -> UnboundedReceiver<Result<WatchResponse, tonic::Status>> {
-        self.resp_receiver
-            .take()
-            .expect("take the unique watch response receiver")
+    fn take_resp_receiver(&mut self) -> UnboundedReceiver<Result<WatchResponse>> {
+        self.resp_receiver.take().unwrap()
     }
 }
 
 #[async_trait]
 impl Shutdown for WatchTunnel {
-    async fn shutdown(&mut self) -> Res<()> {
-        match self.shutdown.take() {
-            Some(shutdown) => {
-                shutdown.send(()).map_err(|_| "Shutdown failed.")?;
-            }
-            None => { /* Already shutdown. This shouldn't happen but it is okay. */ }
+    async fn shutdown(&mut self) -> Result<()> {
+        if let Some(shutdown) = self.shutdown.take() {
+            shutdown.send(()).map_err(|_| Error::ChannelClosed)?;
         }
         Ok(())
     }
@@ -162,17 +157,17 @@ impl Watch {
     pub async fn watch(
         &mut self,
         key_range: KeyRange,
-    ) -> impl Stream<Item = Result<WatchResponse, tonic::Status>> {
+    ) -> impl Stream<Item = Result<WatchResponse>> {
         let mut tunnel = self.tunnel.write().await;
         tunnel
             .req_sender
             .send(WatchRequest::create(key_range))
-            .unwrap();
+            .expect("emit watch request");
         tunnel.take_resp_receiver()
     }
 
     /// Shut down the running watch task, if any.
-    pub async fn shutdown(&mut self) -> Res<()> {
+    pub async fn shutdown(&mut self) -> Result<()> {
         // If we implemented `Shutdown` for this, callers would need it in scope in
         // order to call this method.
         self.tunnel.evict().await

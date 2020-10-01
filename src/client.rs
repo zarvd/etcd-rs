@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use tokio::stream::Stream;
+use tonic::transport::ClientTlsConfig;
 use tonic::{metadata::MetadataValue, transport::Channel, Interceptor, Request};
 
 use crate::proto::etcdserverpb::{
@@ -8,8 +9,7 @@ use crate::proto::etcdserverpb::{
     watch_client::WatchClient,
 };
 use crate::watch::WatchResponse;
-use crate::{Auth, KeyRange, Kv, Lease, Result as Res, Watch};
-use tonic::transport::ClientTlsConfig;
+use crate::{Auth, KeyRange, Kv, Lease, Result, Watch};
 
 /// Config for establishing etcd client.
 pub struct ClientConfig {
@@ -34,39 +34,44 @@ pub(crate) struct Inner {
 }
 
 impl Client {
-    fn get_channel(cfg: &ClientConfig) -> Channel {
-        let endpoints = &cfg.endpoints;
-        let endpoints = endpoints.into_iter().map(|e| {
-            let c = Channel::from_shared(e.to_owned()).expect("parse endpoint URI");
-            match &cfg.tls {
-                Some(tls) => c.tls_config(tls.to_owned()),
+    fn get_channel(cfg: &ClientConfig) -> Result<Channel> {
+        let mut endpoints = Vec::with_capacity(cfg.endpoints.len());
+        for e in cfg.endpoints.iter() {
+            let c = Channel::from_shared(e.to_owned())?;
+            endpoints.push(match &cfg.tls {
+                Some(tls) => c.tls_config(tls.to_owned())?,
                 None => c,
-            }
-        });
-        Channel::balance_list(endpoints)
+            });
+        }
+        Ok(Channel::balance_list(endpoints.into_iter()))
     }
 
     /// Connects to etcd generate auth token.
     /// The client connection used to request the authentication token is typically thrown away; it cannot carry the new token’s credentials. This is because gRPC doesn’t provide a way for adding per RPC credential after creation of the connection
-    async fn generate_auth_token(cfg: &ClientConfig) -> Res<Option<String>> {
+    async fn generate_auth_token(cfg: &ClientConfig) -> Result<Option<String>> {
         use crate::AuthenticateRequest;
 
-        let channel = Self::get_channel(&cfg);
+        let channel = Self::get_channel(&cfg)?;
 
         let mut auth_client = Auth::new(AuthClient::new(channel));
 
-        match cfg.auth.as_ref() {
+        let token = match cfg.auth.as_ref() {
             Some((name, password)) => auth_client
                 .authenticate(AuthenticateRequest::new(name, password))
                 .await
-                .and_then(|r| Ok(Some(r.token().to_owned()))),
-            None => Ok(None),
-        }
+                .map(|r| Some(r.token().to_owned()))?,
+            None => None,
+        };
+
+        Ok(token)
     }
 
     /// Connects to etcd cluster and returns a client.
-    pub async fn connect(cfg: ClientConfig) -> Res<Self> {
-        // If authentication provided, geneartes token before connecting.
+    ///
+    /// # Errors
+    /// Will returns `Err` if failed to contact with given endpoints or authentication failed.
+    pub async fn connect(cfg: ClientConfig) -> Result<Self> {
+        // If authentication provided, generates token before connecting.
         let token = Self::generate_auth_token(&cfg).await?;
 
         let auth_interceptor = if let Some(token) = token {
@@ -80,7 +85,7 @@ impl Client {
             None
         };
 
-        let channel = Self::get_channel(&cfg);
+        let channel = Self::get_channel(&cfg)?;
 
         let inner = {
             let (auth_client, kv_client, watch_client, lease_client) =
@@ -141,10 +146,7 @@ impl Client {
     }
 
     /// Perform a watch operation
-    pub async fn watch(
-        &self,
-        key_range: KeyRange,
-    ) -> impl Stream<Item = Result<WatchResponse, tonic::Status>> {
+    pub async fn watch(&self, key_range: KeyRange) -> impl Stream<Item = Result<WatchResponse>> {
         let mut client = self.inner.watch_client.clone();
         client.watch(key_range).await
     }
@@ -155,7 +157,7 @@ impl Client {
     }
 
     /// Shut down any running tasks.
-    pub async fn shutdown(&self) -> Res<()> {
+    pub async fn shutdown(&self) -> Result<()> {
         let mut watch_client = self.inner.watch_client.clone();
         watch_client.shutdown().await?;
         let mut lease_client = self.inner.lease_client.clone();

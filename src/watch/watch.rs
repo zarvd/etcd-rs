@@ -46,9 +46,8 @@ impl WatchRequest {
     /// It only effects when the request is for subscribing.
     pub fn set_start_revision(&mut self, revision: usize) {
         // TODO log warning if not CreateRequest
-        match self.proto.request_union.as_mut().unwrap() {
-            RequestUnion::CreateRequest(ref mut req) => req.start_revision = revision as i64,
-            _ => {}
+        if let Some(RequestUnion::CreateRequest(ref mut req)) = self.proto.request_union.as_mut() {
+            req.start_revision = revision as i64
         }
     }
 
@@ -56,9 +55,8 @@ impl WatchRequest {
     /// It only effects when the request is for subscribing.
     pub fn set_progress_notify(&mut self, progress_notify: bool) {
         // TODO log warning if not CreateRequest
-        match self.proto.request_union.as_mut().unwrap() {
-            RequestUnion::CreateRequest(ref mut req) => req.progress_notify = progress_notify,
-            _ => {}
+        if let Some(RequestUnion::CreateRequest(ref mut req)) = self.proto.request_union.as_mut() {
+            req.progress_notify = progress_notify
         }
     }
 
@@ -66,9 +64,8 @@ impl WatchRequest {
     /// It only effects when the request is for subscribing.
     pub fn set_prev_kv(&mut self, prev_kv: bool) {
         // TODO log warning if not CreateRequest
-        match self.proto.request_union.as_mut().unwrap() {
-            RequestUnion::CreateRequest(ref mut req) => req.prev_kv = prev_kv,
-            _ => {}
+        if let Some(RequestUnion::CreateRequest(ref mut req)) = self.proto.request_union.as_mut() {
+            req.prev_kv = prev_kv
         }
     }
 }
@@ -100,7 +97,7 @@ impl WatchResponse {
 
     /// Takes the events out of response, leaving an empty vector in its place.
     pub fn take_events(&mut self) -> Vec<Event> {
-        let events = std::mem::replace(&mut self.proto.events, Default::default());
+        let events = std::mem::take(&mut self.proto.events);
 
         events.into_iter().map(From::from).collect()
     }
