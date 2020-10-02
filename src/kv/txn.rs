@@ -221,8 +221,8 @@ impl TxnResponse {
     }
 
     /// Takes the responses corresponding to the results from applying the Success block if succeeded is true or the Failure if succeeded is false.
-    pub fn take_reponses(&mut self) -> Vec<TxnOpResponse> {
-        let responses = std::mem::replace(&mut self.proto.responses, vec![]);
+    pub fn take_responses(&mut self) -> Vec<TxnOpResponse> {
+        let responses = std::mem::take(&mut self.proto.responses);
 
         responses.into_iter().map(From::from).collect()
     }
