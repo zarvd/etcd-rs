@@ -35,7 +35,7 @@ Add following dependencies in your project `cargo.toml`:
 
 ```toml
 [dependencies]
-etcd-rs = "0.2"
+etcd-rs = "0.3"
 ```
 
 #### Setup Client
