@@ -3,8 +3,8 @@ use crate::proto::etcdserverpb;
 use crate::ResponseHeader;
 
 pbwrap_request!(
-/// Request for fetching key-value pairs.
-RangeRequest
+    /// Request for fetching key-value pairs.
+    RangeRequest
 );
 
 impl RangeRequest {

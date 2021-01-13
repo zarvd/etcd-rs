@@ -5,9 +5,9 @@ use crate::KeyRange;
 use crate::ResponseHeader;
 
 pbwrap_request!(
-/// Request for creating or canceling watch.
-#[derive(Debug)]
-WatchRequest
+    /// Request for creating or canceling watch.
+    #[derive(Debug)]
+    WatchRequest
 );
 
 impl WatchRequest {

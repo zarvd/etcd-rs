@@ -7,8 +7,8 @@ use etcdserverpb::compare::{CompareResult, CompareTarget, TargetUnion};
 use etcdserverpb::Compare;
 
 pbwrap_request!(
-/// Request for performing transaction operations.
-TxnRequest
+    /// Request for performing transaction operations.
+    TxnRequest
 );
 
 impl TxnRequest {

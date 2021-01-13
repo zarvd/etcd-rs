@@ -3,8 +3,8 @@ use crate::KeyValue;
 use crate::ResponseHeader;
 
 pbwrap_request!(
-/// Request for putting key-value.
-PutRequest
+    /// Request for putting key-value.
+    PutRequest
 );
 
 impl PutRequest {

@@ -17,7 +17,10 @@ async fn compose(cli: &mut Client) -> Result<()> {
         revision = resp.take_header().unwrap().revision();
 
         for v in 0..10 {
-            let _ = cli.kv().put(PutRequest::new(format!("key-{}", v), format!("{}", v))).await?;
+            let _ = cli
+                .kv()
+                .put(PutRequest::new(format!("key-{}", v), format!("{}", v)))
+                .await?;
         }
     }
 
@@ -53,7 +56,6 @@ async fn compose(cli: &mut Client) -> Result<()> {
     Ok(())
 }
 
-
 async fn cas(cli: &mut Client) -> Result<()> {
     reset(cli).await?;
     println!("start CAS section =====>");
@@ -86,7 +88,7 @@ async fn main() -> Result<()> {
         auth: None,
         tls: None,
     })
-        .await?;
+    .await?;
 
     // Compare-and-Set
     if let Err(e) = cas(&mut client).await {
@@ -97,7 +99,6 @@ async fn main() -> Result<()> {
     if let Err(e) = compose(&mut client).await {
         println!("failed to execute CAS: {:?}", e);
     }
-
 
     Ok(())
 }

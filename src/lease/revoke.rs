@@ -2,8 +2,8 @@ use crate::proto::etcdserverpb;
 use crate::ResponseHeader;
 
 pbwrap_request!(
-/// Request for revoking lease.
-LeaseRevokeRequest
+    /// Request for revoking lease.
+    LeaseRevokeRequest
 );
 
 impl LeaseRevokeRequest {

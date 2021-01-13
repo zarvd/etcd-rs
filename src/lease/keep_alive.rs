@@ -2,9 +2,9 @@ use crate::proto::etcdserverpb;
 use crate::ResponseHeader;
 
 pbwrap_request!(
-/// Request for refreshing lease.
-#[derive(Debug)]
-LeaseKeepAliveRequest
+    /// Request for refreshing lease.
+    #[derive(Debug)]
+    LeaseKeepAliveRequest
 );
 
 impl LeaseKeepAliveRequest {

@@ -1,6 +1,6 @@
 pbwrap_response!(
-/// Response header
-ResponseHeader
+    /// Response header
+    ResponseHeader
 );
 
 impl ResponseHeader {

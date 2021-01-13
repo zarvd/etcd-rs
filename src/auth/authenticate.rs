@@ -2,8 +2,8 @@ use crate::proto::etcdserverpb;
 use crate::ResponseHeader;
 
 pbwrap_request!(
-/// Request for authenticating.
-AuthenticateRequest
+    /// Request for authenticating.
+    AuthenticateRequest
 );
 
 impl AuthenticateRequest {

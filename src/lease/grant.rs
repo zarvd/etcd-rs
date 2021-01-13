@@ -4,8 +4,8 @@ use crate::proto::etcdserverpb;
 use crate::ResponseHeader;
 
 pbwrap_request!(
-/// Request for granting lease.
-LeaseGrantRequest
+    /// Request for granting lease.
+    LeaseGrantRequest
 );
 
 impl LeaseGrantRequest {
