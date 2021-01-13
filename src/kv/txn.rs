@@ -6,10 +6,10 @@ use crate::ResponseHeader;
 use etcdserverpb::compare::{CompareResult, CompareTarget, TargetUnion};
 use etcdserverpb::Compare;
 
+pbwrap_request!(
 /// Request for performing transaction operations.
-pub struct TxnRequest {
-    proto: etcdserverpb::TxnRequest,
-}
+TxnRequest
+);
 
 impl TxnRequest {
     /// Creates a new TxnRequest.
@@ -108,12 +108,6 @@ impl Default for TxnRequest {
     }
 }
 
-impl Into<etcdserverpb::TxnRequest> for TxnRequest {
-    fn into(self) -> etcdserverpb::TxnRequest {
-        self.proto
-    }
-}
-
 /// Transaction Operation.
 pub enum TxnOp {
     Range(RangeRequest),
@@ -122,15 +116,15 @@ pub enum TxnOp {
     Txn(TxnRequest),
 }
 
-impl Into<etcdserverpb::RequestOp> for TxnOp {
-    fn into(self) -> etcdserverpb::RequestOp {
+impl From<TxnOp> for etcdserverpb::RequestOp {
+    fn from(x: TxnOp) -> etcdserverpb::RequestOp {
         use etcdserverpb::request_op::Request;
 
-        let req = match self {
-            Self::Range(req) => Request::RequestRange(req.into()),
-            Self::Put(req) => Request::RequestPut(req.into()),
-            Self::Delete(req) => Request::RequestDeleteRange(req.into()),
-            Self::Txn(req) => Request::RequestTxn(req.into()),
+        let req = match x {
+            TxnOp::Range(req) => Request::RequestRange(req.into()),
+            TxnOp::Put(req) => Request::RequestPut(req.into()),
+            TxnOp::Delete(req) => Request::RequestDeleteRange(req.into()),
+            TxnOp::Txn(req) => Request::RequestTxn(req.into()),
         };
 
         etcdserverpb::RequestOp { request: Some(req) }
@@ -169,9 +163,9 @@ pub enum TxnCmp {
     Less,
 }
 
-impl Into<CompareResult> for TxnCmp {
-    fn into(self) -> CompareResult {
-        match self {
+impl From<TxnCmp> for CompareResult {
+    fn from(x: TxnCmp) -> CompareResult {
+        match x {
             TxnCmp::Equal => CompareResult::Equal,
             TxnCmp::NotEqual => CompareResult::NotEqual,
             TxnCmp::Greater => CompareResult::Greater,
@@ -200,11 +194,7 @@ impl From<etcdserverpb::ResponseOp> for TxnOpResponse {
     }
 }
 
-/// Response for transaction.
-#[derive(Debug)]
-pub struct TxnResponse {
-    proto: etcdserverpb::TxnResponse,
-}
+pbwrap_response!(TxnResponse);
 
 impl TxnResponse {
     /// Takes the header out of response, leaving a `None` in its place.
@@ -225,11 +215,5 @@ impl TxnResponse {
         let responses = std::mem::take(&mut self.proto.responses);
 
         responses.into_iter().map(From::from).collect()
-    }
-}
-
-impl From<etcdserverpb::TxnResponse> for TxnResponse {
-    fn from(resp: etcdserverpb::TxnResponse) -> Self {
-        Self { proto: resp }
     }
 }

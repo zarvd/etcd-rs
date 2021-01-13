@@ -1,10 +1,10 @@
 use crate::proto::etcdserverpb;
 use crate::ResponseHeader;
 
+pbwrap_request!(
 /// Request for revoking lease.
-pub struct LeaseRevokeRequest {
-    proto: etcdserverpb::LeaseRevokeRequest,
-}
+LeaseRevokeRequest
+);
 
 impl LeaseRevokeRequest {
     /// Creates a new LeaseRevokeRequest which will revoke the specified lease.
@@ -15,17 +15,7 @@ impl LeaseRevokeRequest {
     }
 }
 
-impl Into<etcdserverpb::LeaseRevokeRequest> for LeaseRevokeRequest {
-    fn into(self) -> etcdserverpb::LeaseRevokeRequest {
-        self.proto
-    }
-}
-
-/// Response for revoking lease.
-#[derive(Debug)]
-pub struct LeaseRevokeResponse {
-    proto: etcdserverpb::LeaseRevokeResponse,
-}
+pbwrap_response!(LeaseRevokeResponse);
 
 impl LeaseRevokeResponse {
     /// Takes the header out of response, leaving a `None` in its place.
@@ -34,11 +24,5 @@ impl LeaseRevokeResponse {
             Some(header) => Some(From::from(header)),
             _ => None,
         }
-    }
-}
-
-impl From<etcdserverpb::LeaseRevokeResponse> for LeaseRevokeResponse {
-    fn from(resp: etcdserverpb::LeaseRevokeResponse) -> Self {
-        Self { proto: resp }
     }
 }

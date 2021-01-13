@@ -4,11 +4,11 @@ use crate::Event;
 use crate::KeyRange;
 use crate::ResponseHeader;
 
+pbwrap_request!(
 /// Request for creating or canceling watch.
 #[derive(Debug)]
-pub struct WatchRequest {
-    proto: etcdserverpb::WatchRequest,
-}
+WatchRequest
+);
 
 impl WatchRequest {
     /// Creates a new WatchRequest which will subscribe events of the specified key.
@@ -70,16 +70,7 @@ impl WatchRequest {
     }
 }
 
-impl Into<etcdserverpb::WatchRequest> for WatchRequest {
-    fn into(self) -> etcdserverpb::WatchRequest {
-        self.proto
-    }
-}
-
-#[derive(Debug)]
-pub struct WatchResponse {
-    proto: etcdserverpb::WatchResponse,
-}
+pbwrap_response!(WatchResponse);
 
 impl WatchResponse {
     /// Takes the header out of response, leaving a `None` in its place.
@@ -100,11 +91,5 @@ impl WatchResponse {
         let events = std::mem::take(&mut self.proto.events);
 
         events.into_iter().map(From::from).collect()
-    }
-}
-
-impl From<etcdserverpb::WatchResponse> for WatchResponse {
-    fn from(resp: etcdserverpb::WatchResponse) -> Self {
-        Self { proto: resp }
     }
 }

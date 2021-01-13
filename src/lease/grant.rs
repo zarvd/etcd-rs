@@ -3,10 +3,10 @@ use std::time::Duration;
 use crate::proto::etcdserverpb;
 use crate::ResponseHeader;
 
+pbwrap_request!(
 /// Request for granting lease.
-pub struct LeaseGrantRequest {
-    proto: etcdserverpb::LeaseGrantRequest,
-}
+LeaseGrantRequest
+);
 
 impl LeaseGrantRequest {
     /// Creates a new LeaseGrantRequest with the specified TTL.
@@ -25,16 +25,7 @@ impl LeaseGrantRequest {
     }
 }
 
-impl Into<etcdserverpb::LeaseGrantRequest> for LeaseGrantRequest {
-    fn into(self) -> etcdserverpb::LeaseGrantRequest {
-        self.proto
-    }
-}
-
-#[derive(Debug)]
-pub struct LeaseGrantResponse {
-    proto: etcdserverpb::LeaseGrantResponse,
-}
+pbwrap_response!(LeaseGrantResponse);
 
 impl LeaseGrantResponse {
     /// Takes the header out of response, leaving a `None` in its place.
@@ -53,11 +44,5 @@ impl LeaseGrantResponse {
     /// Gets the server chosen lease time-to-live in seconds.
     pub fn ttl(&self) -> u64 {
         self.proto.ttl as u64
-    }
-}
-
-impl From<etcdserverpb::LeaseGrantResponse> for LeaseGrantResponse {
-    fn from(resp: etcdserverpb::LeaseGrantResponse) -> Self {
-        Self { proto: resp }
     }
 }

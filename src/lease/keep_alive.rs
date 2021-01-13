@@ -1,11 +1,11 @@
 use crate::proto::etcdserverpb;
 use crate::ResponseHeader;
 
+pbwrap_request!(
 /// Request for refreshing lease.
 #[derive(Debug)]
-pub struct LeaseKeepAliveRequest {
-    proto: etcdserverpb::LeaseKeepAliveRequest,
-}
+LeaseKeepAliveRequest
+);
 
 impl LeaseKeepAliveRequest {
     /// Creates a new LeaseKeepAliveRequest which will refresh the specified lease.
@@ -16,16 +16,7 @@ impl LeaseKeepAliveRequest {
     }
 }
 
-impl Into<etcdserverpb::LeaseKeepAliveRequest> for LeaseKeepAliveRequest {
-    fn into(self) -> etcdserverpb::LeaseKeepAliveRequest {
-        self.proto
-    }
-}
-
-#[derive(Debug)]
-pub struct LeaseKeepAliveResponse {
-    proto: etcdserverpb::LeaseKeepAliveResponse,
-}
+pbwrap_response!(LeaseKeepAliveResponse);
 
 impl LeaseKeepAliveResponse {
     /// Takes the header out of response, leaving a `None` in its place.
@@ -44,11 +35,5 @@ impl LeaseKeepAliveResponse {
     /// Get the new TTL for the lease.
     pub fn ttl(&self) -> u64 {
         self.proto.ttl as u64
-    }
-}
-
-impl From<etcdserverpb::LeaseKeepAliveResponse> for LeaseKeepAliveResponse {
-    fn from(resp: etcdserverpb::LeaseKeepAliveResponse) -> Self {
-        Self { proto: resp }
     }
 }

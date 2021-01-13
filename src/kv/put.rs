@@ -2,10 +2,10 @@ use crate::proto::etcdserverpb;
 use crate::KeyValue;
 use crate::ResponseHeader;
 
+pbwrap_request!(
 /// Request for putting key-value.
-pub struct PutRequest {
-    proto: etcdserverpb::PutRequest,
-}
+PutRequest
+);
 
 impl PutRequest {
     /// Creates a new PutRequest for saving the specified key-value.
@@ -48,17 +48,7 @@ impl PutRequest {
     }
 }
 
-impl Into<etcdserverpb::PutRequest> for PutRequest {
-    fn into(self) -> etcdserverpb::PutRequest {
-        self.proto
-    }
-}
-
-/// Response for putting key-value.
-#[derive(Debug)]
-pub struct PutResponse {
-    proto: etcdserverpb::PutResponse,
-}
+pbwrap_response!(PutResponse);
 
 impl PutResponse {
     /// Takes the header out of response, leaving a `None` in its place.
@@ -75,11 +65,5 @@ impl PutResponse {
             Some(kv) => Some(From::from(kv)),
             _ => None,
         }
-    }
-}
-
-impl From<etcdserverpb::PutResponse> for PutResponse {
-    fn from(resp: etcdserverpb::PutResponse) -> Self {
-        Self { proto: resp }
     }
 }

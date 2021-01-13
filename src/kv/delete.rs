@@ -2,10 +2,10 @@ use super::{KeyRange, KeyValue};
 use crate::proto::etcdserverpb;
 use crate::ResponseHeader;
 
+pbwrap_request!(
 /// Request for deleting key-value pairs.
-pub struct DeleteRequest {
-    proto: etcdserverpb::DeleteRangeRequest,
-}
+DeleteRangeRequest => DeleteRequest
+);
 
 impl DeleteRequest {
     /// Creates a new DeleteRequest for the specified key range.
@@ -25,17 +25,7 @@ impl DeleteRequest {
     }
 }
 
-impl Into<etcdserverpb::DeleteRangeRequest> for DeleteRequest {
-    fn into(self) -> etcdserverpb::DeleteRangeRequest {
-        self.proto
-    }
-}
-
-/// Response for DeleteRequest.
-#[derive(Debug)]
-pub struct DeleteResponse {
-    proto: etcdserverpb::DeleteRangeResponse,
-}
+pbwrap_response!(DeleteRangeResponse => DeleteResponse);
 
 impl DeleteResponse {
     /// Takes the header out of response, leaving a `None` in its place.
@@ -61,11 +51,5 @@ impl DeleteResponse {
     /// Returns `true` if the previous key-value pairs is not empty, and `false` otherwise.
     pub fn has_prev_kvs(&self) -> bool {
         !self.proto.prev_kvs.is_empty()
-    }
-}
-
-impl From<etcdserverpb::DeleteRangeResponse> for DeleteResponse {
-    fn from(resp: etcdserverpb::DeleteRangeResponse) -> Self {
-        Self { proto: resp }
     }
 }

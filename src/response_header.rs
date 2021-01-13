@@ -1,9 +1,7 @@
-use crate::proto::etcdserverpb;
-
-/// Response header.
-pub struct ResponseHeader {
-    proto: etcdserverpb::ResponseHeader,
-}
+pbwrap_response!(
+/// Response header
+ResponseHeader
+);
 
 impl ResponseHeader {
     /// Get the ID of the cluster which sent the response.
@@ -24,11 +22,5 @@ impl ResponseHeader {
     /// Get the raft term when the request was applied.
     pub fn raft_term(&self) -> u64 {
         self.proto.raft_term
-    }
-}
-
-impl From<etcdserverpb::ResponseHeader> for ResponseHeader {
-    fn from(header: etcdserverpb::ResponseHeader) -> Self {
-        Self { proto: header }
     }
 }
