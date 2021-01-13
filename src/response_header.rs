@@ -1,7 +1,4 @@
-pbwrap_response!(
-    /// Response header
-    ResponseHeader
-);
+pbwrap_response!(ResponseHeader);
 
 impl ResponseHeader {
     /// Get the ID of the cluster which sent the response.
