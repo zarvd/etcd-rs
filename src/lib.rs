@@ -61,7 +61,7 @@ pub use client::{Client, ClientConfig};
 pub use error::Error;
 pub use kv::{
     DeleteRequest, DeleteResponse, KeyRange, KeyValue, Kv, PutRequest, PutResponse, RangeRequest,
-    RangeResponse, TxnCmp, TxnOpResponse, TxnRequest, TxnResponse,
+    RangeResponse, TxnCmp, TxnOp, TxnOpResponse, TxnRequest, TxnResponse,
 };
 pub use lease::{
     Lease, LeaseGrantRequest, LeaseGrantResponse, LeaseKeepAliveRequest, LeaseKeepAliveResponse,

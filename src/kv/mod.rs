@@ -6,7 +6,7 @@ mod txn;
 pub use delete::{DeleteRequest, DeleteResponse};
 pub use put::{PutRequest, PutResponse};
 pub use range::{RangeRequest, RangeResponse};
-pub use txn::{TxnCmp, TxnOpResponse, TxnRequest, TxnResponse};
+pub use txn::{TxnCmp, TxnOp, TxnOpResponse, TxnRequest, TxnResponse};
 
 use tonic::transport::Channel;
 
