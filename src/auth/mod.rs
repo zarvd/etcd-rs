@@ -28,6 +28,6 @@ impl Auth {
             .authenticate(tonic::Request::new(req.into()))
             .await?;
 
-        Ok(From::from(resp.into_inner()))
+        Ok(resp.into_inner().into())
     }
 }

@@ -30,10 +30,7 @@ pbwrap_response!(DeleteRangeResponse => DeleteResponse);
 impl DeleteResponse {
     /// Takes the header out of response, leaving a `None` in its place.
     pub fn take_header(&mut self) -> Option<ResponseHeader> {
-        match self.proto.header.take() {
-            Some(header) => Some(From::from(header)),
-            _ => None,
-        }
+        self.proto.header.take().map(From::from)
     }
 
     /// Returns the number of keys deleted by the delete range request.
@@ -43,9 +40,10 @@ impl DeleteResponse {
 
     /// Takes the previous key-value pairs out of response, leaving an empty vector in its place.
     pub fn take_prev_kvs(&mut self) -> Vec<KeyValue> {
-        let kvs = std::mem::replace(&mut self.proto.prev_kvs, vec![]);
-
-        kvs.into_iter().map(From::from).collect()
+        std::mem::take(&mut self.proto.prev_kvs)
+            .into_iter()
+            .map(From::from)
+            .collect()
     }
 
     /// Returns `true` if the previous key-value pairs is not empty, and `false` otherwise.

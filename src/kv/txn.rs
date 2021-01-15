@@ -199,10 +199,7 @@ pbwrap_response!(TxnResponse);
 impl TxnResponse {
     /// Takes the header out of response, leaving a `None` in its place.
     pub fn take_header(&mut self) -> Option<ResponseHeader> {
-        match self.proto.header.take() {
-            Some(header) => Some(From::from(header)),
-            _ => None,
-        }
+        self.proto.header.take().map(From::from)
     }
 
     /// Returns `true` if the compare evaluated to true, and `false` otherwise.
@@ -212,8 +209,9 @@ impl TxnResponse {
 
     /// Takes the responses corresponding to the results from applying the Success block if succeeded is true or the Failure if succeeded is false.
     pub fn take_responses(&mut self) -> Vec<TxnOpResponse> {
-        let responses = std::mem::take(&mut self.proto.responses);
-
-        responses.into_iter().map(From::from).collect()
+        std::mem::take(&mut self.proto.responses)
+            .into_iter()
+            .map(From::from)
+            .collect()
     }
 }

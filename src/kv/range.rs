@@ -41,17 +41,15 @@ pbwrap_response!(RangeResponse);
 impl RangeResponse {
     /// Takes the header out of response, leaving a `None` in its place.
     pub fn take_header(&mut self) -> Option<ResponseHeader> {
-        match self.proto.header.take() {
-            Some(header) => Some(From::from(header)),
-            _ => None,
-        }
+        self.proto.header.take().map(From::from)
     }
 
     /// Takes the key-value pairs out of response, leaving an empty vector in its place.
     pub fn take_kvs(&mut self) -> Vec<KeyValue> {
-        let kvs = std::mem::replace(&mut self.proto.kvs, vec![]);
-
-        kvs.into_iter().map(From::from).collect()
+        std::mem::take(&mut self.proto.kvs)
+            .into_iter()
+            .map(From::from)
+            .collect()
     }
 
     /// Returns `true` if there are more keys to return in the requested range, and `false` otherwise.

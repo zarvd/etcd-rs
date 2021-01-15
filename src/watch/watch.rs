@@ -26,11 +26,11 @@ impl From<KeyRange> for WatchCreateRequest {
 
 impl WatchCreateRequest {
     /// Creates a new WatchRequest which will subscribe events of the specified key.
-    pub fn create(mut key_range: KeyRange) -> Self {
+    pub fn create(key_range: KeyRange) -> Self {
         Self {
             proto: etcdserverpb::WatchCreateRequest {
-                key: key_range.take_key(),
-                range_end: key_range.take_range_end(),
+                key: key_range.key,
+                range_end: key_range.range_end,
                 start_revision: 0,
                 progress_notify: false,
                 filters: vec![], // TODO support filters

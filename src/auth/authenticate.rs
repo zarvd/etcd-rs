@@ -26,7 +26,7 @@ impl AuthenticateResponse {
     /// Takes the header out of response, leaving a `None` in its place.
     pub fn take_header(&mut self) -> Option<ResponseHeader> {
         match self.proto.header.take() {
-            Some(header) => Some(From::from(header)),
+            Some(header) => Some(header.into()),
             _ => None,
         }
     }

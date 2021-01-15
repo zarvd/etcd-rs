@@ -53,17 +53,11 @@ pbwrap_response!(PutResponse);
 impl PutResponse {
     /// Takes the header out of response, leaving a `None` in its place.
     pub fn take_header(&mut self) -> Option<ResponseHeader> {
-        match self.proto.header.take() {
-            Some(header) => Some(From::from(header)),
-            _ => None,
-        }
+        self.proto.header.take().map(From::from)
     }
 
     /// Takes the previous key-value pair out of response, leaving a `None` in its place.
     pub fn take_prev_kv(&mut self) -> Option<KeyValue> {
-        match self.proto.prev_kv.take() {
-            Some(kv) => Some(From::from(kv)),
-            _ => None,
-        }
+        self.proto.prev_kv.take().map(From::from)
     }
 }

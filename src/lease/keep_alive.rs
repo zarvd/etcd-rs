@@ -10,9 +10,9 @@ pbwrap_request!(
 impl LeaseKeepAliveRequest {
     /// Creates a new LeaseKeepAliveRequest which will refresh the specified lease.
     pub fn new(id: u64) -> Self {
-        let proto = etcdserverpb::LeaseKeepAliveRequest { id: id as i64 };
-
-        Self { proto }
+        Self {
+            proto: etcdserverpb::LeaseKeepAliveRequest { id: id as i64 },
+        }
     }
 }
 
@@ -21,10 +21,7 @@ pbwrap_response!(LeaseKeepAliveResponse);
 impl LeaseKeepAliveResponse {
     /// Takes the header out of response, leaving a `None` in its place.
     pub fn take_header(&mut self) -> Option<ResponseHeader> {
-        match self.proto.header.take() {
-            Some(header) => Some(From::from(header)),
-            _ => None,
-        }
+        self.proto.header.take().map(From::from)
     }
 
     /// Gets the lease ID for the refreshed lease.

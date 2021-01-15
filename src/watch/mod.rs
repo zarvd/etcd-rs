@@ -101,13 +101,13 @@ impl WatchTunnel {
                 };
                 match resp {
                     Ok(Some(resp)) => {
-                        resp_sender.send(Ok(From::from(resp))).unwrap();
+                        resp_sender.send(Ok(resp.into())).unwrap();
                     }
                     Ok(None) => {
                         return;
                     }
                     Err(e) => {
-                        resp_sender.send(Err(From::from(e))).unwrap();
+                        resp_sender.send(Err(e.into())).unwrap();
                     }
                 };
             }

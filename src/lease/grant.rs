@@ -11,17 +11,17 @@ pbwrap_request!(
 impl LeaseGrantRequest {
     /// Creates a new LeaseGrantRequest with the specified TTL.
     pub fn new(ttl: Duration) -> Self {
-        let proto = etcdserverpb::LeaseGrantRequest {
-            ttl: ttl.as_secs() as i64,
-            id: 0,
-        };
-
-        Self { proto }
+        Self {
+            proto: etcdserverpb::LeaseGrantRequest {
+                ttl: ttl.as_secs() as i64,
+                id: 0,
+            },
+        }
     }
 
     /// Set custom lease ID.
     pub fn set_id(&mut self, id: u64) {
-        self.proto.id = id as i64
+        self.proto.id = id as i64;
     }
 }
 
@@ -30,10 +30,7 @@ pbwrap_response!(LeaseGrantResponse);
 impl LeaseGrantResponse {
     /// Takes the header out of response, leaving a `None` in its place.
     pub fn take_header(&mut self) -> Option<ResponseHeader> {
-        match self.proto.header.take() {
-            Some(header) => Some(From::from(header)),
-            _ => None,
-        }
+        self.proto.header.take().map(From::from)
     }
 
     /// Gets the lease ID for the granted lease.
