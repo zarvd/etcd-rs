@@ -3,8 +3,8 @@ use crate::proto::etcdserverpb;
 use crate::ResponseHeader;
 
 pbwrap_request!(
-/// Request for deleting key-value pairs.
-DeleteRangeRequest => DeleteRequest
+    /// Request for deleting key-value pairs.
+    DeleteRangeRequest => DeleteRequest
 );
 
 impl DeleteRequest {
