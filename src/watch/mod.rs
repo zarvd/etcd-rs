@@ -78,12 +78,7 @@ impl WatchTunnel {
         let (req_sender, mut req_receiver) = unbounded_channel::<etcdserverpb::WatchRequest>();
         let (resp_sender, resp_receiver) = unbounded_channel::<Result<WatchResponse>>();
 
-        let request = tonic::Request::new(async_stream::stream! {
-            while let Some(req) = req_receiver.recv().await {
-                yield req;
-            }
-        });
-
+        let request = tonic::Request::new(req_receiver);
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
 
         // monitor inbound watch response and transfer to the receiver
