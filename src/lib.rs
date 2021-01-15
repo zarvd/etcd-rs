@@ -68,7 +68,7 @@ pub use lease::{
     LeaseRevokeRequest, LeaseRevokeResponse,
 };
 pub use response_header::ResponseHeader;
-pub use watch::{Event, EventType, Watch, WatchRequest, WatchResponse};
+pub use watch::{Event, EventType, Watch, WatchCancelRequest, WatchCreateRequest, WatchResponse};
 
 macro_rules! pbwrap_request {
     ($(#[$attr:meta])* $intern:ident => $name:ident) => {

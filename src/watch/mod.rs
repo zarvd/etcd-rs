@@ -53,35 +53,34 @@ use tokio::sync::{
 };
 use tonic::transport::Channel;
 
-pub use watch::{WatchRequest, WatchResponse};
+pub use watch::{WatchCancelRequest, WatchCreateRequest, WatchResponse};
 
 use crate::lazy::{Lazy, Shutdown};
 use crate::proto::etcdserverpb;
 use crate::proto::etcdserverpb::watch_client::WatchClient;
 use crate::proto::mvccpb;
+use crate::Error;
 use crate::KeyValue;
 use crate::Result;
-use crate::{Error, KeyRange};
 
 mod watch;
 
 /// WatchTunnel is a reusable connection for `Watch` operation
 /// The underlying gRPC method is Bi-directional streaming
 struct WatchTunnel {
-    req_sender: UnboundedSender<WatchRequest>,
+    req_sender: UnboundedSender<etcdserverpb::WatchRequest>,
     resp_receiver: Option<UnboundedReceiver<Result<WatchResponse>>>,
     shutdown: Option<oneshot::Sender<()>>,
 }
 
 impl WatchTunnel {
     fn new(mut client: WatchClient<Channel>) -> Self {
-        let (req_sender, mut req_receiver) = unbounded_channel::<WatchRequest>();
+        let (req_sender, mut req_receiver) = unbounded_channel::<etcdserverpb::WatchRequest>();
         let (resp_sender, resp_receiver) = unbounded_channel::<Result<WatchResponse>>();
 
         let request = tonic::Request::new(async_stream::stream! {
             while let Some(req) = req_receiver.recv().await {
-                let pb: etcdserverpb::WatchRequest = req.into();
-                yield pb;
+                yield req;
             }
         });
 
@@ -120,18 +119,12 @@ impl WatchTunnel {
             shutdown: Some(shutdown_tx),
         }
     }
-
-    fn take_resp_receiver(&mut self) -> UnboundedReceiver<Result<WatchResponse>> {
-        self.resp_receiver.take().unwrap()
-    }
 }
 
 #[async_trait]
 impl Shutdown for WatchTunnel {
     async fn shutdown(&mut self) -> Result<()> {
-        if let Some(shutdown) = self.shutdown.take() {
-            shutdown.send(()).map_err(|_| Error::ChannelClosed)?;
-        }
+        self.shutdown.take().ok_or(Error::ChannelClosed)?;
         Ok(())
     }
 }
@@ -154,16 +147,21 @@ impl Watch {
     }
 
     /// Performs a watch operation.
-    pub async fn watch(
-        &mut self,
-        key_range: KeyRange,
-    ) -> impl Stream<Item = Result<WatchResponse>> {
-        let mut tunnel = self.tunnel.write().await;
-        tunnel
+    pub async fn watch<C>(&mut self, req: C)
+    where
+        C: Into<WatchCreateRequest>,
+    {
+        self.tunnel
+            .write()
+            .await
             .req_sender
-            .send(WatchRequest::create(key_range))
+            .send(req.into().into())
             .expect("emit watch request");
-        tunnel.take_resp_receiver()
+    }
+
+    pub async fn take_receiver(&mut self) -> impl Stream<Item = Result<WatchResponse>> {
+        let mut tunnel = self.tunnel.write().await;
+        tunnel.resp_receiver.take().unwrap()
     }
 
     /// Shut down the running watch task, if any.
