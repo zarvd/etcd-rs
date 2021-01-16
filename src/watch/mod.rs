@@ -68,14 +68,14 @@ mod watch;
 /// WatchTunnel is a reusable connection for `Watch` operation
 /// The underlying gRPC method is Bi-directional streaming
 struct WatchTunnel {
-    req_sender: UnboundedSender<etcdserverpb::WatchRequest>,
+    req_sender: Option<UnboundedSender<etcdserverpb::WatchRequest>>,
     resp_receiver: Option<UnboundedReceiver<Result<WatchResponse>>>,
     shutdown: Option<oneshot::Sender<()>>,
 }
 
 impl WatchTunnel {
     fn new(mut client: WatchClient<Channel>) -> Self {
-        let (req_sender, mut req_receiver) = unbounded_channel::<etcdserverpb::WatchRequest>();
+        let (req_sender, req_receiver) = unbounded_channel::<etcdserverpb::WatchRequest>();
         let (resp_sender, resp_receiver) = unbounded_channel::<Result<WatchResponse>>();
 
         let request = tonic::Request::new(req_receiver);
@@ -109,7 +109,7 @@ impl WatchTunnel {
         });
 
         Self {
-            req_sender,
+            req_sender: Some(req_sender),
             resp_receiver: Some(resp_receiver),
             shutdown: Some(shutdown_tx),
         }
@@ -119,6 +119,7 @@ impl WatchTunnel {
 #[async_trait]
 impl Shutdown for WatchTunnel {
     async fn shutdown(&mut self) -> Result<()> {
+        self.req_sender.take().ok_or(Error::ChannelClosed)?;
         self.shutdown.take().ok_or(Error::ChannelClosed)?;
         Ok(())
     }
@@ -142,7 +143,7 @@ impl Watch {
     }
 
     /// Performs a watch operation.
-    pub async fn watch<C>(&mut self, req: C)
+    pub async fn watch<C>(&mut self, req: C) -> Result<()>
     where
         C: Into<WatchCreateRequest>,
     {
@@ -150,8 +151,11 @@ impl Watch {
             .write()
             .await
             .req_sender
+            .as_mut()
+            .ok_or(Error::ChannelClosed)?
             .send(req.into().into())
-            .expect("emit watch request");
+            .map_err(|_| Error::ChannelClosed)?;
+        Ok(())
     }
 
     pub async fn take_receiver(&mut self) -> impl Stream<Item = Result<WatchResponse>> {

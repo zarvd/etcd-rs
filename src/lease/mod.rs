@@ -88,7 +88,7 @@ mod revoke;
 /// LeaseKeepAliveTunnel is a reusable connection for `Lease Keep Alive` operation.
 /// The underlying gRPC method is Bi-directional streaming.
 struct LeaseKeepAliveTunnel {
-    req_sender: UnboundedSender<etcdserverpb::LeaseKeepAliveRequest>,
+    req_sender: Option<UnboundedSender<etcdserverpb::LeaseKeepAliveRequest>>,
     resp_receiver: Option<UnboundedReceiver<Result<LeaseKeepAliveResponse>>>,
     shutdown: Option<oneshot::Sender<()>>,
 }
@@ -129,7 +129,7 @@ impl LeaseKeepAliveTunnel {
         });
 
         Self {
-            req_sender,
+            req_sender: Some(req_sender),
             resp_receiver: Some(resp_receiver),
             shutdown: Some(shutdown_tx),
         }
@@ -139,6 +139,7 @@ impl LeaseKeepAliveTunnel {
 #[async_trait]
 impl Shutdown for LeaseKeepAliveTunnel {
     async fn shutdown(&mut self) -> Result<()> {
+        self.req_sender.take().ok_or(Error::ChannelClosed)?;
         self.shutdown.take().ok_or(Error::ChannelClosed)?;
         Ok(())
     }
@@ -201,6 +202,8 @@ impl Lease {
             .write()
             .await
             .req_sender
+            .as_mut()
+            .ok_or(Error::ChannelClosed)?
             .send(req.into())
             .map_err(|_| Error::ChannelClosed)
     }

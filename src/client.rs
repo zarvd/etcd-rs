@@ -131,9 +131,12 @@ impl Client {
     }
 
     /// Perform a watch operation
-    pub async fn watch(&self, key_range: KeyRange) -> impl Stream<Item = Result<WatchResponse>> {
-        self.watch_client().watch(key_range).await;
-        self.watch_client().take_receiver().await
+    pub async fn watch(
+        &self,
+        key_range: KeyRange,
+    ) -> Result<impl Stream<Item = Result<WatchResponse>>> {
+        self.watch_client().watch(key_range).await?;
+        Ok(self.watch_client().take_receiver().await)
     }
 
     /// Gets a lease client.
