@@ -18,7 +18,7 @@
 //!     }).await?;
 //!
 //!     // print out all received watch responses
-//!     let mut inbound = client.watch(KeyRange::key("foo")).await;
+//!     let mut inbound = client.watch(KeyRange::key("foo")).await.unwrap();
 //!     tokio::spawn(async move {
 //!         while let Some(resp) = inbound.next().await {
 //!             println!("watch response: {:?}", resp);

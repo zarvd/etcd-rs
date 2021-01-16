@@ -187,13 +187,13 @@ impl Lease {
     /// Fetch keep alive response stream.
     pub async fn keep_alive_responses(
         &mut self,
-    ) -> impl Stream<Item = Result<LeaseKeepAliveResponse>> {
+    ) -> Result<impl Stream<Item = Result<LeaseKeepAliveResponse>>> {
         self.keep_alive_tunnel
             .write()
             .await
             .resp_receiver
             .take()
-            .unwrap()
+            .ok_or(Error::ChannelClosed)
     }
 
     /// Performs a lease refreshing operation.
