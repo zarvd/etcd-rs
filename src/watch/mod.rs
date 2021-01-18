@@ -5,7 +5,7 @@
 //! Watch key `foo` changes
 //!
 //! ```no_run
-//! use tokio::stream::StreamExt;
+//! use futures::StreamExt;
 //!
 //! use etcd_rs::*;
 //!
@@ -46,11 +46,12 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use futures::future::FutureExt;
-use tokio::stream::Stream;
+use futures::Stream;
 use tokio::sync::{
     mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
     oneshot,
 };
+use tokio_stream::wrappers::UnboundedReceiverStream;
 use tonic::transport::Channel;
 
 pub use watch::{WatchRequest, WatchResponse};
@@ -163,7 +164,7 @@ impl Watch {
             .req_sender
             .send(WatchRequest::create(key_range))
             .expect("emit watch request");
-        tunnel.take_resp_receiver()
+        UnboundedReceiverStream::new(tunnel.take_resp_receiver())
     }
 
     /// Shut down the running watch task, if any.
