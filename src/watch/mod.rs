@@ -5,7 +5,7 @@
 //! Watch key `foo` changes
 //!
 //! ```no_run
-//! use tokio::stream::StreamExt;
+//! use futures::StreamExt;
 //!
 //! use etcd_rs::*;
 //!
@@ -46,11 +46,12 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use futures::future::FutureExt;
-use tokio::stream::Stream;
+use futures::Stream;
 use tokio::sync::{
     mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
     oneshot,
 };
+use tokio_stream::wrappers::UnboundedReceiverStream;
 use tonic::transport::Channel;
 
 pub use watch::{WatchCancelRequest, WatchCreateRequest, WatchResponse};
@@ -78,7 +79,7 @@ impl WatchTunnel {
         let (req_sender, req_receiver) = unbounded_channel::<etcdserverpb::WatchRequest>();
         let (resp_sender, resp_receiver) = unbounded_channel::<Result<WatchResponse>>();
 
-        let request = tonic::Request::new(req_receiver);
+        let request = tonic::Request::new(UnboundedReceiverStream::new(req_receiver));
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
 
         // monitor inbound watch response and transfer to the receiver
@@ -160,7 +161,7 @@ impl Watch {
 
     pub async fn take_receiver(&mut self) -> impl Stream<Item = Result<WatchResponse>> {
         let mut tunnel = self.tunnel.write().await;
-        tunnel.resp_receiver.take().unwrap()
+        UnboundedReceiverStream::new(tunnel.resp_receiver.take().unwrap())
     }
 
     /// Shut down the running watch task, if any.

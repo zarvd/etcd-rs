@@ -1,7 +1,6 @@
 use std::time::Duration;
 
-use futures::future::FutureExt;
-use tokio::stream::StreamExt;
+use futures::{future::FutureExt, StreamExt};
 
 use etcd_rs::*;
 

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use tokio::stream::Stream;
+use futures::Stream;
 use tonic::transport::ClientTlsConfig;
 use tonic::{metadata::MetadataValue, transport::Channel, Interceptor, Request};
 
@@ -135,8 +135,9 @@ impl Client {
         &self,
         key_range: KeyRange,
     ) -> Result<impl Stream<Item = Result<WatchResponse>>> {
-        self.watch_client().watch(key_range).await?;
-        Ok(self.watch_client().take_receiver().await)
+        let mut wc = self.watch_client();
+        wc.watch(key_range).await?;
+        Ok(wc.take_receiver().await)
     }
 
     /// Gets a lease client.

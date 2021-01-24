@@ -65,11 +65,12 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use futures::future::FutureExt;
-use tokio::stream::Stream;
+use futures::Stream;
 use tokio::sync::{
     mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
     oneshot,
 };
+use tokio_stream::wrappers::UnboundedReceiverStream;
 use tonic::transport::Channel;
 
 pub use grant::{LeaseGrantRequest, LeaseGrantResponse};
@@ -99,7 +100,7 @@ impl LeaseKeepAliveTunnel {
         let (resp_sender, resp_receiver) = unbounded_channel::<Result<LeaseKeepAliveResponse>>();
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
-        let request = tonic::Request::new(req_receiver);
+        let request = tonic::Request::new(UnboundedReceiverStream::new(req_receiver));
 
         // monitor inbound watch response and transfer to the receiver
         tokio::spawn(async move {
@@ -194,6 +195,7 @@ impl Lease {
             .resp_receiver
             .take()
             .ok_or(Error::ChannelClosed)
+            .map(UnboundedReceiverStream::new)
     }
 
     /// Performs a lease refreshing operation.
