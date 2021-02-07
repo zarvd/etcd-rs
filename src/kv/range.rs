@@ -2,10 +2,10 @@ use super::{KeyRange, KeyValue};
 use crate::proto::etcdserverpb;
 use crate::ResponseHeader;
 
-/// Request for fetching key-value pairs.
-pub struct RangeRequest {
-    proto: etcdserverpb::RangeRequest,
-}
+pbwrap_request!(
+    /// Request for fetching key-value pairs.
+    RangeRequest
+);
 
 impl RangeRequest {
     /// Creates a new RangeRequest for the specified key range.
@@ -36,32 +36,20 @@ impl RangeRequest {
     }
 }
 
-impl Into<etcdserverpb::RangeRequest> for RangeRequest {
-    fn into(self) -> etcdserverpb::RangeRequest {
-        self.proto
-    }
-}
-
-/// Response for RangeRequest.
-#[derive(Debug)]
-pub struct RangeResponse {
-    proto: etcdserverpb::RangeResponse,
-}
+pbwrap_response!(RangeResponse);
 
 impl RangeResponse {
     /// Takes the header out of response, leaving a `None` in its place.
     pub fn take_header(&mut self) -> Option<ResponseHeader> {
-        match self.proto.header.take() {
-            Some(header) => Some(From::from(header)),
-            _ => None,
-        }
+        self.proto.header.take().map(From::from)
     }
 
     /// Takes the key-value pairs out of response, leaving an empty vector in its place.
     pub fn take_kvs(&mut self) -> Vec<KeyValue> {
-        let kvs = std::mem::replace(&mut self.proto.kvs, vec![]);
-
-        kvs.into_iter().map(From::from).collect()
+        std::mem::take(&mut self.proto.kvs)
+            .into_iter()
+            .map(From::from)
+            .collect()
     }
 
     /// Returns `true` if there are more keys to return in the requested range, and `false` otherwise.
@@ -72,11 +60,5 @@ impl RangeResponse {
     /// Returns the number of keys within the range when requested.
     pub fn count(&self) -> usize {
         self.proto.count as usize
-    }
-}
-
-impl From<etcdserverpb::RangeResponse> for RangeResponse {
-    fn from(resp: etcdserverpb::RangeResponse) -> Self {
-        Self { proto: resp }
     }
 }

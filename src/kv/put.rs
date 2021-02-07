@@ -2,10 +2,10 @@ use crate::proto::etcdserverpb;
 use crate::KeyValue;
 use crate::ResponseHeader;
 
-/// Request for putting key-value.
-pub struct PutRequest {
-    proto: etcdserverpb::PutRequest,
-}
+pbwrap_request!(
+    /// Request for putting key-value.
+    PutRequest
+);
 
 impl PutRequest {
     /// Creates a new PutRequest for saving the specified key-value.
@@ -48,38 +48,16 @@ impl PutRequest {
     }
 }
 
-impl Into<etcdserverpb::PutRequest> for PutRequest {
-    fn into(self) -> etcdserverpb::PutRequest {
-        self.proto
-    }
-}
-
-/// Response for putting key-value.
-#[derive(Debug)]
-pub struct PutResponse {
-    proto: etcdserverpb::PutResponse,
-}
+pbwrap_response!(PutResponse);
 
 impl PutResponse {
     /// Takes the header out of response, leaving a `None` in its place.
     pub fn take_header(&mut self) -> Option<ResponseHeader> {
-        match self.proto.header.take() {
-            Some(header) => Some(From::from(header)),
-            _ => None,
-        }
+        self.proto.header.take().map(From::from)
     }
 
     /// Takes the previous key-value pair out of response, leaving a `None` in its place.
     pub fn take_prev_kv(&mut self) -> Option<KeyValue> {
-        match self.proto.prev_kv.take() {
-            Some(kv) => Some(From::from(kv)),
-            _ => None,
-        }
-    }
-}
-
-impl From<etcdserverpb::PutResponse> for PutResponse {
-    fn from(resp: etcdserverpb::PutResponse) -> Self {
-        Self { proto: resp }
+        self.proto.prev_kv.take().map(From::from)
     }
 }

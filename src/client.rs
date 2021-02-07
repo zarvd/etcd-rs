@@ -74,16 +74,13 @@ impl Client {
         // If authentication provided, generates token before connecting.
         let token = Self::generate_auth_token(&cfg).await?;
 
-        let auth_interceptor = if let Some(token) = token {
+        let auth_interceptor = token.map(|token| {
             let token = MetadataValue::from_str(&token).unwrap();
-            Some(Interceptor::new(move |mut req: Request<()>| {
+            Interceptor::new(move |mut req: Request<()>| {
                 req.metadata_mut().insert("authorization", token.clone());
-
                 Ok(req)
-            }))
-        } else {
-            None
-        };
+            })
+        });
 
         let channel = Self::get_channel(&cfg)?;
 
@@ -91,37 +88,25 @@ impl Client {
             let (auth_client, kv_client, watch_client, lease_client) =
                 if let Some(auth_interceptor) = auth_interceptor {
                     (
-                        Auth::new(AuthClient::with_interceptor(
-                            channel.clone(),
-                            auth_interceptor.clone(),
-                        )),
-                        Kv::new(KvClient::with_interceptor(
-                            channel.clone(),
-                            auth_interceptor.clone(),
-                        )),
-                        Watch::new(WatchClient::with_interceptor(
-                            channel.clone(),
-                            auth_interceptor.clone(),
-                        )),
-                        Lease::new(LeaseClient::with_interceptor(
-                            channel.clone(),
-                            auth_interceptor,
-                        )),
+                        AuthClient::with_interceptor(channel.clone(), auth_interceptor.clone()),
+                        KvClient::with_interceptor(channel.clone(), auth_interceptor.clone()),
+                        WatchClient::with_interceptor(channel.clone(), auth_interceptor.clone()),
+                        LeaseClient::with_interceptor(channel.clone(), auth_interceptor),
                     )
                 } else {
                     (
-                        Auth::new(AuthClient::new(channel.clone())),
-                        Kv::new(KvClient::new(channel.clone())),
-                        Watch::new(WatchClient::new(channel.clone())),
-                        Lease::new(LeaseClient::new(channel.clone())),
+                        AuthClient::new(channel.clone()),
+                        KvClient::new(channel.clone()),
+                        WatchClient::new(channel.clone()),
+                        LeaseClient::new(channel.clone()),
                     )
                 };
             Inner {
                 channel,
-                auth_client,
-                kv_client,
-                watch_client,
-                lease_client,
+                auth_client: Auth::new(auth_client),
+                kv_client: Kv::new(kv_client),
+                watch_client: Watch::new(watch_client),
+                lease_client: Lease::new(lease_client),
             }
         };
 
@@ -146,9 +131,13 @@ impl Client {
     }
 
     /// Perform a watch operation
-    pub async fn watch(&self, key_range: KeyRange) -> impl Stream<Item = Result<WatchResponse>> {
-        let mut client = self.inner.watch_client.clone();
-        client.watch(key_range).await
+    pub async fn watch(
+        &self,
+        key_range: KeyRange,
+    ) -> Result<impl Stream<Item = Result<WatchResponse>>> {
+        let mut wc = self.watch_client();
+        wc.watch(key_range).await?;
+        Ok(wc.take_receiver().await)
     }
 
     /// Gets a lease client.

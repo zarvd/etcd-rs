@@ -6,7 +6,7 @@ mod txn;
 pub use delete::{DeleteRequest, DeleteResponse};
 pub use put::{PutRequest, PutResponse};
 pub use range::{RangeRequest, RangeResponse};
-pub use txn::{TxnCmp, TxnOpResponse, TxnRequest, TxnResponse};
+pub use txn::{TxnCmp, TxnOp, TxnOpResponse, TxnRequest, TxnResponse};
 
 use tonic::transport::Channel;
 
@@ -29,14 +29,14 @@ impl Kv {
     pub async fn put(&mut self, req: PutRequest) -> Res<PutResponse> {
         let resp = self.client.put(tonic::Request::new(req.into())).await?;
 
-        Ok(From::from(resp.into_inner()))
+        Ok(resp.into_inner().into())
     }
 
     /// Performs a key-value fetching operation.
     pub async fn range(&mut self, req: RangeRequest) -> Res<RangeResponse> {
         let resp = self.client.range(tonic::Request::new(req.into())).await?;
 
-        Ok(From::from(resp.into_inner()))
+        Ok(resp.into_inner().into())
     }
 
     /// Performs a key-value deleting operation.
@@ -46,14 +46,14 @@ impl Kv {
             .delete_range(tonic::Request::new(req.into()))
             .await?;
 
-        Ok(From::from(resp.into_inner()))
+        Ok(resp.into_inner().into())
     }
 
     /// Performs a transaction operation.
     pub async fn txn(&mut self, req: TxnRequest) -> Res<TxnResponse> {
         let resp = self.client.txn(tonic::Request::new(req.into())).await?;
 
-        Ok(From::from(resp.into_inner()))
+        Ok(resp.into_inner().into())
     }
 }
 
@@ -71,7 +71,7 @@ impl KeyValue {
 
     /// Takes the key out of response, leaving an empty vector in its place.
     pub fn take_key(&mut self) -> Vec<u8> {
-        std::mem::replace(&mut self.proto.key, vec![])
+        std::mem::take(&mut self.proto.key)
     }
 
     /// Converts the key from bytes `&[u8]` to `&str`.
@@ -87,7 +87,7 @@ impl KeyValue {
 
     /// Takes the value out of response, leaving an empty vector in its place.
     pub fn take_value(&mut self) -> Vec<u8> {
-        std::mem::replace(&mut self.proto.value, vec![])
+        std::mem::take(&mut self.proto.value)
     }
 
     /// Converts the value from bytes `&[u8]` to `&str`.
@@ -130,8 +130,8 @@ impl From<mvccpb::KeyValue> for KeyValue {
 
 /// KeyRange is an abstraction for describing etcd key of various types.
 pub struct KeyRange {
-    key: Vec<u8>,
-    range_end: Vec<u8>,
+    pub key: Vec<u8>,
+    pub range_end: Vec<u8>,
 }
 
 impl KeyRange {
@@ -184,20 +184,12 @@ impl KeyRange {
             for i in (0..end.len()).rev() {
                 if end[i] < 0xff {
                     end[i] += 1;
-                    end = end[0..=i].to_vec();
+                    end.truncate(i + 1);
                     break;
                 }
             }
             end
         };
         Self { key, range_end }
-    }
-
-    pub fn take_key(&mut self) -> Vec<u8> {
-        std::mem::replace(&mut self.key, vec![])
-    }
-
-    pub fn take_range_end(&mut self) -> Vec<u8> {
-        std::mem::replace(&mut self.range_end, vec![])
     }
 }

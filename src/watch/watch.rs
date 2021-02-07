@@ -4,82 +4,82 @@ use crate::Event;
 use crate::KeyRange;
 use crate::ResponseHeader;
 
-/// Request for creating or canceling watch.
-#[derive(Debug)]
-pub struct WatchRequest {
-    proto: etcdserverpb::WatchRequest,
-}
+pbwrap_request!(
+    /// Request for creating watch.
+    #[derive(Debug)]
+    WatchCreateRequest
+);
 
-impl WatchRequest {
-    /// Creates a new WatchRequest which will subscribe events of the specified key.
-    pub fn create(mut key_range: KeyRange) -> Self {
-        Self {
-            proto: etcdserverpb::WatchRequest {
-                request_union: Some(RequestUnion::CreateRequest(
-                    etcdserverpb::WatchCreateRequest {
-                        key: key_range.take_key(),
-                        range_end: key_range.take_range_end(),
-                        start_revision: 0,
-                        progress_notify: false,
-                        filters: vec![], // TODO support filters
-                        prev_kv: false,
-                    },
-                )),
-            },
+impl From<WatchCreateRequest> for etcdserverpb::WatchRequest {
+    fn from(x: WatchCreateRequest) -> Self {
+        etcdserverpb::WatchRequest {
+            request_union: Some(RequestUnion::CreateRequest(x.into())),
         }
     }
+}
 
-    /// Creates a new WatchRequest which will unsubscribe the specified watch.
-    pub fn cancel(watch_id: usize) -> Self {
+impl From<KeyRange> for WatchCreateRequest {
+    fn from(key_range: KeyRange) -> Self {
+        Self::create(key_range)
+    }
+}
+
+impl WatchCreateRequest {
+    /// Creates a new WatchRequest which will subscribe events of the specified key.
+    pub fn create(key_range: KeyRange) -> Self {
         Self {
-            proto: etcdserverpb::WatchRequest {
-                request_union: Some(RequestUnion::CancelRequest(
-                    etcdserverpb::WatchCancelRequest {
-                        watch_id: watch_id as i64,
-                    },
-                )),
+            proto: etcdserverpb::WatchCreateRequest {
+                key: key_range.key,
+                range_end: key_range.range_end,
+                start_revision: 0,
+                progress_notify: false,
+                filters: vec![], // TODO support filters
+                prev_kv: false,
             },
         }
     }
 
     /// Sets the revision to watch from (inclusive). No start_revision is "now".
-    /// It only effects when the request is for subscribing.
-    pub fn set_start_revision(&mut self, revision: usize) {
-        // TODO log warning if not CreateRequest
-        if let Some(RequestUnion::CreateRequest(ref mut req)) = self.proto.request_union.as_mut() {
-            req.start_revision = revision as i64
-        }
+    pub fn set_start_revision(&mut self, revision: u64) {
+        self.proto.start_revision = revision as i64;
     }
 
-    /// Sets progress notify.
-    /// It only effects when the request is for subscribing.
     pub fn set_progress_notify(&mut self, progress_notify: bool) {
-        // TODO log warning if not CreateRequest
-        if let Some(RequestUnion::CreateRequest(ref mut req)) = self.proto.request_union.as_mut() {
-            req.progress_notify = progress_notify
-        }
+        self.proto.progress_notify = progress_notify;
     }
 
     /// Sets previous key value.
-    /// It only effects when the request is for subscribing.
     pub fn set_prev_kv(&mut self, prev_kv: bool) {
-        // TODO log warning if not CreateRequest
-        if let Some(RequestUnion::CreateRequest(ref mut req)) = self.proto.request_union.as_mut() {
-            req.prev_kv = prev_kv
+        self.proto.prev_kv = prev_kv;
+    }
+}
+
+pbwrap_request!(
+    /// Request for canceling a watch.
+    #[derive(Debug)]
+    WatchCancelRequest
+);
+
+impl From<WatchCancelRequest> for etcdserverpb::WatchRequest {
+    fn from(x: WatchCancelRequest) -> Self {
+        etcdserverpb::WatchRequest {
+            request_union: Some(RequestUnion::CancelRequest(x.into())),
         }
     }
 }
 
-impl Into<etcdserverpb::WatchRequest> for WatchRequest {
-    fn into(self) -> etcdserverpb::WatchRequest {
-        self.proto
+impl WatchCancelRequest {
+    /// Creates a new WatchRequest which will unsubscribe the specified watch.
+    pub fn cancel(watch_id: usize) -> Self {
+        Self {
+            proto: etcdserverpb::WatchCancelRequest {
+                watch_id: watch_id as i64,
+            },
+        }
     }
 }
 
-#[derive(Debug)]
-pub struct WatchResponse {
-    proto: etcdserverpb::WatchResponse,
-}
+pbwrap_response!(WatchResponse);
 
 impl WatchResponse {
     /// Takes the header out of response, leaving a `None` in its place.
@@ -100,11 +100,5 @@ impl WatchResponse {
         let events = std::mem::take(&mut self.proto.events);
 
         events.into_iter().map(From::from).collect()
-    }
-}
-
-impl From<etcdserverpb::WatchResponse> for WatchResponse {
-    fn from(resp: etcdserverpb::WatchResponse) -> Self {
-        Self { proto: resp }
     }
 }

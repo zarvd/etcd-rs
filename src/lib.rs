@@ -61,14 +61,49 @@ pub use client::{Client, ClientConfig};
 pub use error::Error;
 pub use kv::{
     DeleteRequest, DeleteResponse, KeyRange, KeyValue, Kv, PutRequest, PutResponse, RangeRequest,
-    RangeResponse, TxnCmp, TxnOpResponse, TxnRequest, TxnResponse,
+    RangeResponse, TxnCmp, TxnOp, TxnOpResponse, TxnRequest, TxnResponse,
 };
 pub use lease::{
     Lease, LeaseGrantRequest, LeaseGrantResponse, LeaseKeepAliveRequest, LeaseKeepAliveResponse,
     LeaseRevokeRequest, LeaseRevokeResponse,
 };
 pub use response_header::ResponseHeader;
-pub use watch::{Event, EventType, Watch, WatchRequest, WatchResponse};
+pub use watch::{Event, EventType, Watch, WatchCancelRequest, WatchCreateRequest, WatchResponse};
+
+macro_rules! pbwrap_request {
+    ($(#[$attr:meta])* $intern:ident => $name:ident) => {
+        $(#[$attr])*
+        pub struct $name {
+            proto: crate::proto::etcdserverpb::$intern,
+        }
+        impl From<$name> for crate::proto::etcdserverpb::$intern {
+            fn from(x: $name) -> Self {
+                x.proto
+            }
+        }
+    };
+    ($(#[$attr:meta])* $name:ident) => {
+        pbwrap_request!($(#[$attr])* $name => $name);
+    }
+}
+
+macro_rules! pbwrap_response {
+    ($(#[$attr:meta])* $intern:ident => $name:ident) => {
+        $(#[$attr])*
+        #[derive(Debug)]
+        pub struct $name {
+            proto: crate::proto::etcdserverpb::$intern,
+        }
+        impl From<crate::proto::etcdserverpb::$intern> for $name {
+            fn from(resp: crate::proto::etcdserverpb::$intern) -> Self {
+                Self { proto: resp }
+            }
+        }
+    };
+    ($(#[$attr:meta])* $name:ident) => {
+        pbwrap_response!($(#[$attr])* $name => $name);
+    }
+}
 
 mod auth;
 mod client;

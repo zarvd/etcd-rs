@@ -232,7 +232,7 @@ mod tests {
 
         struct Test {
             shutdown: Arc<AtomicUsize>,
-        };
+        }
 
         #[async_trait]
         impl Shutdown for Test {

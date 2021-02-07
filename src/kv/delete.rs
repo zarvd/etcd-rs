@@ -2,10 +2,10 @@ use super::{KeyRange, KeyValue};
 use crate::proto::etcdserverpb;
 use crate::ResponseHeader;
 
-/// Request for deleting key-value pairs.
-pub struct DeleteRequest {
-    proto: etcdserverpb::DeleteRangeRequest,
-}
+pbwrap_request!(
+    /// Request for deleting key-value pairs.
+    DeleteRangeRequest => DeleteRequest
+);
 
 impl DeleteRequest {
     /// Creates a new DeleteRequest for the specified key range.
@@ -25,25 +25,12 @@ impl DeleteRequest {
     }
 }
 
-impl Into<etcdserverpb::DeleteRangeRequest> for DeleteRequest {
-    fn into(self) -> etcdserverpb::DeleteRangeRequest {
-        self.proto
-    }
-}
-
-/// Response for DeleteRequest.
-#[derive(Debug)]
-pub struct DeleteResponse {
-    proto: etcdserverpb::DeleteRangeResponse,
-}
+pbwrap_response!(DeleteRangeResponse => DeleteResponse);
 
 impl DeleteResponse {
     /// Takes the header out of response, leaving a `None` in its place.
     pub fn take_header(&mut self) -> Option<ResponseHeader> {
-        match self.proto.header.take() {
-            Some(header) => Some(From::from(header)),
-            _ => None,
-        }
+        self.proto.header.take().map(From::from)
     }
 
     /// Returns the number of keys deleted by the delete range request.
@@ -53,19 +40,14 @@ impl DeleteResponse {
 
     /// Takes the previous key-value pairs out of response, leaving an empty vector in its place.
     pub fn take_prev_kvs(&mut self) -> Vec<KeyValue> {
-        let kvs = std::mem::replace(&mut self.proto.prev_kvs, vec![]);
-
-        kvs.into_iter().map(From::from).collect()
+        std::mem::take(&mut self.proto.prev_kvs)
+            .into_iter()
+            .map(From::from)
+            .collect()
     }
 
     /// Returns `true` if the previous key-value pairs is not empty, and `false` otherwise.
     pub fn has_prev_kvs(&self) -> bool {
         !self.proto.prev_kvs.is_empty()
-    }
-}
-
-impl From<etcdserverpb::DeleteRangeResponse> for DeleteResponse {
-    fn from(resp: etcdserverpb::DeleteRangeResponse) -> Self {
-        Self { proto: resp }
     }
 }
