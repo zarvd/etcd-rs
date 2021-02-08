@@ -12,6 +12,7 @@ use crate::watch::WatchResponse;
 use crate::{Auth, KeyRange, Kv, Lease, Result, Watch};
 
 /// Config for establishing etcd client.
+#[derive(Clone)]
 pub struct ClientConfig {
     pub endpoints: Vec<String>,
     pub auth: Option<(String, String)>,
@@ -134,7 +135,7 @@ impl Client {
     pub async fn watch(
         &self,
         key_range: KeyRange,
-    ) -> Result<impl Stream<Item = Result<WatchResponse>>> {
+    ) -> Result<impl Stream<Item = Result<Option<WatchResponse>>>> {
         let mut wc = self.watch_client();
         wc.watch(key_range).await?;
         Ok(wc.take_receiver().await)
