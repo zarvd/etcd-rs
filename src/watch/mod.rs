@@ -70,14 +70,14 @@ mod watch;
 /// The underlying gRPC method is Bi-directional streaming
 struct WatchTunnel {
     req_sender: Option<UnboundedSender<etcdserverpb::WatchRequest>>,
-    resp_receiver: Option<UnboundedReceiver<Result<WatchResponse>>>,
+    resp_receiver: Option<UnboundedReceiver<Result<Option<WatchResponse>>>>,
     shutdown: Option<oneshot::Sender<()>>,
 }
 
 impl WatchTunnel {
     fn new(mut client: WatchClient<Channel>) -> Self {
         let (req_sender, req_receiver) = unbounded_channel::<etcdserverpb::WatchRequest>();
-        let (resp_sender, resp_receiver) = unbounded_channel::<Result<WatchResponse>>();
+        let (resp_sender, resp_receiver) = unbounded_channel::<Result<Option<WatchResponse>>>();
 
         let request = tonic::Request::new(UnboundedReceiverStream::new(req_receiver));
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
@@ -86,27 +86,40 @@ impl WatchTunnel {
         tokio::spawn(async move {
             let mut shutdown_rx = shutdown_rx.fuse();
             let mut inbound = futures::select! {
-                res = client.watch(request).fuse() => res.unwrap().into_inner(),
-                _ = shutdown_rx => { return; },
+                res = client.watch(request).fuse() => {
+                    match res {
+                        Err(e) => {
+                            resp_sender.send(Err(From::from(e))).unwrap();
+                            return;
+                        },
+                        Ok(i) => i.into_inner(),
+                    }
+                },
+                _ = shutdown_rx => {
+                    resp_sender.send(Ok(None)).unwrap();
+                    return;
+                },
             };
 
             loop {
                 let resp = futures::select! {
                     resp = inbound.message().fuse() => resp,
-                    _ = shutdown_rx => { return; },
+                    _ = shutdown_rx => { break; },
                 };
                 match resp {
                     Ok(Some(resp)) => {
-                        resp_sender.send(Ok(resp.into())).unwrap();
+                        resp_sender.send(Ok(Some(resp.into()))).unwrap();
                     }
                     Ok(None) => {
-                        return;
+                        break;
                     }
                     Err(e) => {
                         resp_sender.send(Err(e.into())).unwrap();
+                        return;
                     }
                 };
             }
+            resp_sender.send(Ok(None)).unwrap();
         });
 
         Self {
@@ -159,7 +172,7 @@ impl Watch {
         Ok(())
     }
 
-    pub async fn take_receiver(&mut self) -> impl Stream<Item = Result<WatchResponse>> {
+    pub async fn take_receiver(&mut self) -> impl Stream<Item = Result<Option<WatchResponse>>> {
         let mut tunnel = self.tunnel.write().await;
         UnboundedReceiverStream::new(tunnel.resp_receiver.take().unwrap())
     }

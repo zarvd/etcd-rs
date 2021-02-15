@@ -6,7 +6,7 @@ use crate::ResponseHeader;
 
 pbwrap_request!(
     /// Request for creating watch.
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     WatchCreateRequest
 );
 
