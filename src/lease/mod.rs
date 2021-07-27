@@ -77,9 +77,12 @@ pub use grant::{LeaseGrantRequest, LeaseGrantResponse};
 pub use keep_alive::{LeaseKeepAliveRequest, LeaseKeepAliveResponse};
 pub use revoke::{LeaseRevokeRequest, LeaseRevokeResponse};
 
-use crate::lazy::{Lazy, Shutdown};
 use crate::proto::etcdserverpb;
 use crate::proto::etcdserverpb::lease_client::LeaseClient;
+use crate::{
+    client::Interceptor,
+    lazy::{Lazy, Shutdown},
+};
 use crate::{Error, Result};
 
 mod grant;
@@ -95,12 +98,14 @@ struct LeaseKeepAliveTunnel {
 }
 
 impl LeaseKeepAliveTunnel {
-    fn new(mut client: LeaseClient<Channel>) -> Self {
+    fn new(mut client: LeaseClient<Channel>, interceptor: Interceptor) -> Self {
         let (req_sender, req_receiver) = unbounded_channel::<etcdserverpb::LeaseKeepAliveRequest>();
         let (resp_sender, resp_receiver) = unbounded_channel::<Result<LeaseKeepAliveResponse>>();
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
-        let request = tonic::Request::new(UnboundedReceiverStream::new(req_receiver));
+        let request = interceptor.intercept(tonic::Request::new(UnboundedReceiverStream::new(
+            req_receiver,
+        )));
 
         // monitor inbound watch response and transfer to the receiver
         tokio::spawn(async move {
@@ -151,17 +156,22 @@ impl Shutdown for LeaseKeepAliveTunnel {
 pub struct Lease {
     client: LeaseClient<Channel>,
     keep_alive_tunnel: Arc<Lazy<LeaseKeepAliveTunnel>>,
+    interceptor: Interceptor,
 }
 
 impl Lease {
-    pub(crate) fn new(client: LeaseClient<Channel>) -> Self {
+    pub(crate) fn new(client: LeaseClient<Channel>, interceptor: Interceptor) -> Self {
         let keep_alive_tunnel = {
             let client = client.clone();
-            Arc::new(Lazy::new(move || LeaseKeepAliveTunnel::new(client.clone())))
+            let interceptor = interceptor.clone();
+            Arc::new(Lazy::new(move || {
+                LeaseKeepAliveTunnel::new(client.clone(), interceptor.clone())
+            }))
         };
         Self {
             client,
             keep_alive_tunnel,
+            interceptor,
         }
     }
 
@@ -169,7 +179,7 @@ impl Lease {
     pub async fn grant(&mut self, req: LeaseGrantRequest) -> Result<LeaseGrantResponse> {
         let resp = self
             .client
-            .lease_grant(tonic::Request::new(req.into()))
+            .lease_grant(self.interceptor.intercept(tonic::Request::new(req.into())))
             .await?;
 
         Ok(resp.into_inner().into())
@@ -179,7 +189,7 @@ impl Lease {
     pub async fn revoke(&mut self, req: LeaseRevokeRequest) -> Result<LeaseRevokeResponse> {
         let resp = self
             .client
-            .lease_revoke(tonic::Request::new(req.into()))
+            .lease_revoke(self.interceptor.intercept(tonic::Request::new(req.into())))
             .await?;
 
         Ok(resp.into_inner().into())

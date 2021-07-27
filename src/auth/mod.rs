@@ -4,6 +4,7 @@ pub use authenticate::{AuthenticateRequest, AuthenticateResponse};
 
 use tonic::transport::Channel;
 
+use crate::client::Interceptor;
 use crate::proto::etcdserverpb::auth_client::AuthClient;
 use crate::Result;
 
@@ -11,11 +12,15 @@ use crate::Result;
 #[derive(Clone)]
 pub struct Auth {
     client: AuthClient<Channel>,
+    interceptor: Interceptor,
 }
 
 impl Auth {
-    pub(crate) fn new(client: AuthClient<Channel>) -> Self {
-        Self { client }
+    pub(crate) fn new(client: AuthClient<Channel>, interceptor: Interceptor) -> Self {
+        Self {
+            client,
+            interceptor,
+        }
     }
 
     /// Performs an authenticating operation.
@@ -25,7 +30,7 @@ impl Auth {
     pub async fn authenticate(&mut self, req: AuthenticateRequest) -> Result<AuthenticateResponse> {
         let resp = self
             .client
-            .authenticate(tonic::Request::new(req.into()))
+            .authenticate(self.interceptor.intercept(tonic::Request::new(req.into())))
             .await?;
 
         Ok(resp.into_inner().into())

@@ -10,6 +10,7 @@ pub use txn::{TxnCmp, TxnOp, TxnOpResponse, TxnRequest, TxnResponse};
 
 use tonic::transport::Channel;
 
+use crate::client::Interceptor;
 use crate::proto::etcdserverpb::kv_client::KvClient;
 use crate::proto::mvccpb;
 use crate::Result as Res;
@@ -18,23 +19,33 @@ use crate::Result as Res;
 #[derive(Clone)]
 pub struct Kv {
     client: KvClient<Channel>,
+    interceptor: Interceptor,
 }
 
 impl Kv {
-    pub(crate) fn new(client: KvClient<Channel>) -> Self {
-        Self { client }
+    pub(crate) fn new(client: KvClient<Channel>, interceptor: Interceptor) -> Self {
+        Self {
+            client,
+            interceptor,
+        }
     }
 
     /// Performs a key-value saving operation.
     pub async fn put(&mut self, req: PutRequest) -> Res<PutResponse> {
-        let resp = self.client.put(tonic::Request::new(req.into())).await?;
+        let resp = self
+            .client
+            .put(self.interceptor.intercept(tonic::Request::new(req.into())))
+            .await?;
 
         Ok(resp.into_inner().into())
     }
 
     /// Performs a key-value fetching operation.
     pub async fn range(&mut self, req: RangeRequest) -> Res<RangeResponse> {
-        let resp = self.client.range(tonic::Request::new(req.into())).await?;
+        let resp = self
+            .client
+            .range(self.interceptor.intercept(tonic::Request::new(req.into())))
+            .await?;
 
         Ok(resp.into_inner().into())
     }
@@ -43,7 +54,7 @@ impl Kv {
     pub async fn delete(&mut self, req: DeleteRequest) -> Res<DeleteResponse> {
         let resp = self
             .client
-            .delete_range(tonic::Request::new(req.into()))
+            .delete_range(self.interceptor.intercept(tonic::Request::new(req.into())))
             .await?;
 
         Ok(resp.into_inner().into())
@@ -51,7 +62,10 @@ impl Kv {
 
     /// Performs a transaction operation.
     pub async fn txn(&mut self, req: TxnRequest) -> Res<TxnResponse> {
-        let resp = self.client.txn(tonic::Request::new(req.into())).await?;
+        let resp = self
+            .client
+            .txn(self.interceptor.intercept(tonic::Request::new(req.into())))
+            .await?;
 
         Ok(resp.into_inner().into())
     }

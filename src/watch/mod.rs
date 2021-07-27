@@ -56,13 +56,16 @@ use tonic::transport::Channel;
 
 pub use watch::{WatchCancelRequest, WatchCreateRequest, WatchResponse};
 
-use crate::lazy::{Lazy, Shutdown};
 use crate::proto::etcdserverpb;
 use crate::proto::etcdserverpb::watch_client::WatchClient;
 use crate::proto::mvccpb;
 use crate::Error;
 use crate::KeyValue;
 use crate::Result;
+use crate::{
+    client::Interceptor,
+    lazy::{Lazy, Shutdown},
+};
 
 mod watch;
 
@@ -75,7 +78,7 @@ struct WatchTunnel {
 }
 
 impl WatchTunnel {
-    fn new(mut client: WatchClient<Channel>) -> Self {
+    fn new(mut client: WatchClient<Channel>, interceptor: Interceptor) -> Self {
         let (req_sender, req_receiver) = unbounded_channel::<etcdserverpb::WatchRequest>();
         let (resp_sender, resp_receiver) = unbounded_channel::<Result<Option<WatchResponse>>>();
 
@@ -86,7 +89,7 @@ impl WatchTunnel {
         tokio::spawn(async move {
             let mut shutdown_rx = shutdown_rx.fuse();
             let mut inbound = futures::select! {
-                res = client.watch(request).fuse() => {
+                res = client.watch(interceptor.intercept(request)).fuse() => {
                     match res {
                         Err(e) => {
                             resp_sender.send(Err(From::from(e))).unwrap();
@@ -142,18 +145,19 @@ impl Shutdown for WatchTunnel {
 /// Watch client.
 #[derive(Clone)]
 pub struct Watch {
-    client: WatchClient<Channel>,
     tunnel: Arc<Lazy<WatchTunnel>>,
 }
 
 impl Watch {
-    pub(crate) fn new(client: WatchClient<Channel>) -> Self {
+    pub(crate) fn new(client: WatchClient<Channel>, interceptor: Interceptor) -> Self {
         let tunnel = {
             let client = client.clone();
-            Arc::new(Lazy::new(move || WatchTunnel::new(client.clone())))
+            Arc::new(Lazy::new(move || {
+                WatchTunnel::new(client.clone(), interceptor.clone())
+            }))
         };
 
-        Self { client, tunnel }
+        Self { tunnel }
     }
 
     /// Performs a watch operation.

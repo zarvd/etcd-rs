@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use futures::Stream;
+use tonic::metadata::Ascii;
 use tonic::transport::ClientTlsConfig;
-use tonic::{metadata::MetadataValue, transport::Channel, Interceptor, Request};
+use tonic::{metadata::MetadataValue, transport::Channel, Request};
 
 use crate::proto::etcdserverpb::{
     auth_client::AuthClient, kv_client::KvClient, lease_client::LeaseClient,
@@ -23,6 +24,20 @@ pub struct ClientConfig {
 #[derive(Clone)]
 pub struct Client {
     inner: Arc<Inner>,
+}
+
+#[derive(Clone)]
+pub(crate) struct Interceptor {
+    token: Option<MetadataValue<Ascii>>,
+}
+
+impl Interceptor {
+    pub(crate) fn intercept<T>(&self, mut req: Request<T>) -> Request<T> {
+        if let Some(token) = self.token.as_ref() {
+            req.metadata_mut().insert("authorization", token.clone());
+        }
+        req
+    }
 }
 
 #[allow(dead_code)]
@@ -54,7 +69,7 @@ impl Client {
 
         let channel = Self::get_channel(&cfg)?;
 
-        let mut auth_client = Auth::new(AuthClient::new(channel));
+        let mut auth_client = Auth::new(AuthClient::new(channel), Interceptor { token: None });
 
         let token = match cfg.auth.as_ref() {
             Some((name, password)) => auth_client
@@ -74,41 +89,18 @@ impl Client {
     pub async fn connect(cfg: ClientConfig) -> Result<Self> {
         // If authentication provided, generates token before connecting.
         let token = Self::generate_auth_token(&cfg).await?;
+        let token = token.map(|token| MetadataValue::from_str(&token).unwrap());
 
-        let auth_interceptor = token.map(|token| {
-            let token = MetadataValue::from_str(&token).unwrap();
-            Interceptor::new(move |mut req: Request<()>| {
-                req.metadata_mut().insert("authorization", token.clone());
-                Ok(req)
-            })
-        });
+        let interceptor = Interceptor { token };
 
         let channel = Self::get_channel(&cfg)?;
 
-        let inner = {
-            let (auth_client, kv_client, watch_client, lease_client) =
-                if let Some(auth_interceptor) = auth_interceptor {
-                    (
-                        AuthClient::with_interceptor(channel.clone(), auth_interceptor.clone()),
-                        KvClient::with_interceptor(channel.clone(), auth_interceptor.clone()),
-                        WatchClient::with_interceptor(channel.clone(), auth_interceptor.clone()),
-                        LeaseClient::with_interceptor(channel.clone(), auth_interceptor),
-                    )
-                } else {
-                    (
-                        AuthClient::new(channel.clone()),
-                        KvClient::new(channel.clone()),
-                        WatchClient::new(channel.clone()),
-                        LeaseClient::new(channel.clone()),
-                    )
-                };
-            Inner {
-                channel,
-                auth_client: Auth::new(auth_client),
-                kv_client: Kv::new(kv_client),
-                watch_client: Watch::new(watch_client),
-                lease_client: Lease::new(lease_client),
-            }
+        let inner = Inner {
+            auth_client: Auth::new(AuthClient::new(channel.clone()), interceptor.clone()),
+            kv_client: Kv::new(KvClient::new(channel.clone()), interceptor.clone()),
+            watch_client: Watch::new(WatchClient::new(channel.clone()), interceptor.clone()),
+            lease_client: Lease::new(LeaseClient::new(channel.clone()), interceptor.clone()),
+            channel,
         };
 
         Ok(Self {
