@@ -2,19 +2,22 @@ mod authenticate;
 
 pub use authenticate::{AuthenticateRequest, AuthenticateResponse};
 
-use tonic::transport::Channel;
+use tonic::{
+    service::{interceptor::InterceptedService, Interceptor},
+    transport::Channel,
+};
 
 use crate::proto::etcdserverpb::auth_client::AuthClient;
 use crate::Result;
 
 /// Auth client.
 #[derive(Clone)]
-pub struct Auth {
-    client: AuthClient<Channel>,
+pub struct Auth<F> {
+    client: AuthClient<InterceptedService<Channel, F>>,
 }
 
-impl Auth {
-    pub(crate) fn new(client: AuthClient<Channel>) -> Self {
+impl<F: Interceptor + Clone> Auth<F> {
+    pub(crate) fn new(client: AuthClient<InterceptedService<Channel, F>>) -> Self {
         Self { client }
     }
 

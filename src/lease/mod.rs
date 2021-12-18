@@ -71,7 +71,10 @@ use tokio::sync::{
     oneshot,
 };
 use tokio_stream::wrappers::UnboundedReceiverStream;
-use tonic::transport::Channel;
+use tonic::{
+    service::{interceptor::InterceptedService, Interceptor},
+    transport::Channel,
+};
 
 pub use grant::{LeaseGrantRequest, LeaseGrantResponse};
 pub use keep_alive::{LeaseKeepAliveRequest, LeaseKeepAliveResponse};
@@ -95,7 +98,9 @@ struct LeaseKeepAliveTunnel {
 }
 
 impl LeaseKeepAliveTunnel {
-    fn new(mut client: LeaseClient<Channel>) -> Self {
+    fn new<F: 'static + Interceptor + Clone + Sync + Send>(
+        mut client: LeaseClient<InterceptedService<Channel, F>>,
+    ) -> Self {
         let (req_sender, req_receiver) = unbounded_channel::<etcdserverpb::LeaseKeepAliveRequest>();
         let (resp_sender, resp_receiver) = unbounded_channel::<Result<LeaseKeepAliveResponse>>();
 
@@ -148,13 +153,13 @@ impl Shutdown for LeaseKeepAliveTunnel {
 
 /// Lease client.
 #[derive(Clone)]
-pub struct Lease {
-    client: LeaseClient<Channel>,
+pub struct Lease<F: 'static + Interceptor + Clone + Sync + Send> {
+    client: LeaseClient<InterceptedService<Channel, F>>,
     keep_alive_tunnel: Arc<Lazy<LeaseKeepAliveTunnel>>,
 }
 
-impl Lease {
-    pub(crate) fn new(client: LeaseClient<Channel>) -> Self {
+impl<F: 'static + Interceptor + Clone + Sync + Send> Lease<F> {
+    pub(crate) fn new(client: LeaseClient<InterceptedService<Channel, F>>) -> Self {
         let keep_alive_tunnel = {
             let client = client.clone();
             Arc::new(Lazy::new(move || LeaseKeepAliveTunnel::new(client.clone())))

@@ -8,7 +8,10 @@ pub use put::{PutRequest, PutResponse};
 pub use range::{RangeRequest, RangeResponse};
 pub use txn::{TxnCmp, TxnOp, TxnOpResponse, TxnRequest, TxnResponse};
 
-use tonic::transport::Channel;
+use tonic::{
+    service::{interceptor::InterceptedService, Interceptor},
+    transport::Channel,
+};
 
 use crate::proto::etcdserverpb::kv_client::KvClient;
 use crate::proto::mvccpb;
@@ -16,12 +19,12 @@ use crate::Result as Res;
 
 /// Key-Value client.
 #[derive(Clone)]
-pub struct Kv {
-    client: KvClient<Channel>,
+pub struct Kv<F> {
+    client: KvClient<InterceptedService<Channel, F>>,
 }
 
-impl Kv {
-    pub(crate) fn new(client: KvClient<Channel>) -> Self {
+impl<F: Interceptor + Clone> Kv<F> {
+    pub(crate) fn new(client: KvClient<InterceptedService<Channel, F>>) -> Self {
         Self { client }
     }
 

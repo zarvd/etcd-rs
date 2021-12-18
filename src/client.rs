@@ -1,8 +1,12 @@
 use std::sync::Arc;
 
 use futures::Stream;
-use tonic::transport::ClientTlsConfig;
-use tonic::{metadata::MetadataValue, transport::Channel, Interceptor, Request};
+use tonic::{
+    metadata::{Ascii, MetadataValue},
+    service::Interceptor,
+    transport::{Channel, ClientTlsConfig},
+    Request, Status,
+};
 
 use crate::proto::etcdserverpb::{
     auth_client::AuthClient, kv_client::KvClient, lease_client::LeaseClient,
@@ -10,6 +14,31 @@ use crate::proto::etcdserverpb::{
 };
 use crate::watch::WatchResponse;
 use crate::{Auth, KeyRange, Kv, Lease, Result, Watch};
+
+#[derive(Clone)]
+pub struct TokenInterceptor {
+    token: Option<MetadataValue<Ascii>>,
+}
+
+impl TokenInterceptor {
+    fn new(token: Option<String>) -> Self {
+        Self {
+            token: token.map(|token: String| MetadataValue::from_str(&token).unwrap()),
+        }
+    }
+}
+
+impl Interceptor for TokenInterceptor {
+    fn call(&mut self, mut req: tonic::Request<()>) -> std::result::Result<Request<()>, Status> {
+        match &self.token {
+            Some(token) => {
+                req.metadata_mut().insert("authorization", token.clone());
+                Ok(req)
+            }
+            None => Ok(req),
+        }
+    }
+}
 
 /// Config for establishing etcd client.
 #[derive(Clone)]
@@ -22,16 +51,16 @@ pub struct ClientConfig {
 /// Client is an abstraction for grouping etcd operations and managing underlying network communications.
 #[derive(Clone)]
 pub struct Client {
-    inner: Arc<Inner>,
+    inner: Arc<Inner<TokenInterceptor>>,
 }
 
 #[allow(dead_code)]
-pub(crate) struct Inner {
+pub(crate) struct Inner<F: 'static + Interceptor + Clone + Sync + Send> {
     channel: Channel,
-    auth_client: Auth,
-    kv_client: Kv,
-    watch_client: Watch,
-    lease_client: Lease,
+    auth_client: Auth<F>,
+    kv_client: Kv<F>,
+    watch_client: Watch<F>,
+    lease_client: Lease<F>,
 }
 
 impl Client {
@@ -54,7 +83,10 @@ impl Client {
 
         let channel = Self::get_channel(&cfg)?;
 
-        let mut auth_client = Auth::new(AuthClient::new(channel));
+        let mut auth_client = Auth::new(AuthClient::with_interceptor(
+            channel,
+            TokenInterceptor::new(None),
+        ));
 
         let token = match cfg.auth.as_ref() {
             Some((name, password)) => auth_client
@@ -75,33 +107,17 @@ impl Client {
         // If authentication provided, generates token before connecting.
         let token = Self::generate_auth_token(&cfg).await?;
 
-        let auth_interceptor = token.map(|token| {
-            let token = MetadataValue::from_str(&token).unwrap();
-            Interceptor::new(move |mut req: Request<()>| {
-                req.metadata_mut().insert("authorization", token.clone());
-                Ok(req)
-            })
-        });
+        let auth_interceptor = TokenInterceptor::new(token);
 
         let channel = Self::get_channel(&cfg)?;
 
         let inner = {
-            let (auth_client, kv_client, watch_client, lease_client) =
-                if let Some(auth_interceptor) = auth_interceptor {
-                    (
-                        AuthClient::with_interceptor(channel.clone(), auth_interceptor.clone()),
-                        KvClient::with_interceptor(channel.clone(), auth_interceptor.clone()),
-                        WatchClient::with_interceptor(channel.clone(), auth_interceptor.clone()),
-                        LeaseClient::with_interceptor(channel.clone(), auth_interceptor),
-                    )
-                } else {
-                    (
-                        AuthClient::new(channel.clone()),
-                        KvClient::new(channel.clone()),
-                        WatchClient::new(channel.clone()),
-                        LeaseClient::new(channel.clone()),
-                    )
-                };
+            let (auth_client, kv_client, watch_client, lease_client) = (
+                AuthClient::with_interceptor(channel.clone(), auth_interceptor.clone()),
+                KvClient::with_interceptor(channel.clone(), auth_interceptor.clone()),
+                WatchClient::with_interceptor(channel.clone(), auth_interceptor.clone()),
+                LeaseClient::with_interceptor(channel.clone(), auth_interceptor),
+            );
             Inner {
                 channel,
                 auth_client: Auth::new(auth_client),
@@ -117,17 +133,17 @@ impl Client {
     }
 
     /// Gets an auth client.
-    pub fn auth(&self) -> Auth {
+    pub fn auth(&self) -> Auth<TokenInterceptor> {
         self.inner.auth_client.clone()
     }
 
     /// Gets a key-value client.
-    pub fn kv(&self) -> Kv {
+    pub fn kv(&self) -> Kv<TokenInterceptor> {
         self.inner.kv_client.clone()
     }
 
     /// Gets a watch client.
-    pub fn watch_client(&self) -> Watch {
+    pub fn watch_client(&self) -> Watch<TokenInterceptor> {
         self.inner.watch_client.clone()
     }
 
@@ -142,7 +158,7 @@ impl Client {
     }
 
     /// Gets a lease client.
-    pub fn lease(&self) -> Lease {
+    pub fn lease(&self) -> Lease<TokenInterceptor> {
         self.inner.lease_client.clone()
     }
 

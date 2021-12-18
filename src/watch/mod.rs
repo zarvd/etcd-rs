@@ -52,7 +52,10 @@ use tokio::sync::{
     oneshot,
 };
 use tokio_stream::wrappers::UnboundedReceiverStream;
-use tonic::transport::Channel;
+use tonic::{
+    service::{interceptor::InterceptedService, Interceptor},
+    transport::Channel,
+};
 
 pub use watch::{WatchCancelRequest, WatchCreateRequest, WatchResponse};
 
@@ -75,7 +78,9 @@ struct WatchTunnel {
 }
 
 impl WatchTunnel {
-    fn new(mut client: WatchClient<Channel>) -> Self {
+    fn new<F: 'static + Interceptor + Clone + Sync + Send>(
+        mut client: WatchClient<InterceptedService<Channel, F>>,
+    ) -> Self {
         let (req_sender, req_receiver) = unbounded_channel::<etcdserverpb::WatchRequest>();
         let (resp_sender, resp_receiver) = unbounded_channel::<Result<Option<WatchResponse>>>();
 
@@ -141,13 +146,13 @@ impl Shutdown for WatchTunnel {
 
 /// Watch client.
 #[derive(Clone)]
-pub struct Watch {
-    client: WatchClient<Channel>,
+pub struct Watch<F: 'static + Interceptor + Clone + Sync + Send> {
+    client: WatchClient<InterceptedService<Channel, F>>,
     tunnel: Arc<Lazy<WatchTunnel>>,
 }
 
-impl Watch {
-    pub(crate) fn new(client: WatchClient<Channel>) -> Self {
+impl<F: 'static + Interceptor + Clone + Sync + Send> Watch<F> {
+    pub(crate) fn new(client: WatchClient<InterceptedService<Channel, F>>) -> Self {
         let tunnel = {
             let client = client.clone();
             Arc::new(Lazy::new(move || WatchTunnel::new(client.clone())))
