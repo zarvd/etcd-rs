@@ -1,14 +1,14 @@
 #![allow(
-    clippy::suspicious_op_assign_impl,
-    clippy::suspicious_arithmetic_impl,
-    clippy::module_inception
+clippy::suspicious_op_assign_impl,
+clippy::suspicious_arithmetic_impl,
+clippy::module_inception
 )]
 #![deny(
-    clippy::clone_on_ref_ptr,
-    clippy::dbg_macro,
-    clippy::enum_glob_use,
-    clippy::get_unwrap,
-    clippy::macro_use_imports
+clippy::clone_on_ref_ptr,
+clippy::dbg_macro,
+clippy::enum_glob_use,
+clippy::get_unwrap,
+clippy::macro_use_imports
 )]
 
 //! An asynchronously etcd client for Rust.
