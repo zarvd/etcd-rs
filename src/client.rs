@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use futures::Stream;
 use tonic::{
@@ -41,11 +42,14 @@ impl Interceptor for TokenInterceptor {
 }
 
 /// Config for establishing etcd client.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct ClientConfig {
     pub endpoints: Vec<String>,
     pub auth: Option<(String, String)>,
     pub tls: Option<ClientTlsConfig>,
+    pub connect_timeout: Option<Duration>,
+    pub h2_keepalive_interval: Option<Duration>,
+    pub h2_keepalive_timeout: Option<Duration>,
 }
 
 /// Client is an abstraction for grouping etcd operations and managing underlying network communications.
@@ -67,7 +71,16 @@ impl Client {
     fn get_channel(cfg: &ClientConfig) -> Result<Channel> {
         let mut endpoints = Vec::with_capacity(cfg.endpoints.len());
         for e in cfg.endpoints.iter() {
-            let c = Channel::from_shared(e.to_owned())?;
+            let mut c = Channel::from_shared(e.to_owned())?;
+            if let Some(d) = cfg.connect_timeout {
+                c = c.connect_timeout(d);
+            }
+            if let Some(d) = cfg.h2_keepalive_interval {
+                c = c.http2_keep_alive_interval(d);
+            }
+            if let Some(d) = cfg.h2_keepalive_timeout {
+                c = c.keep_alive_timeout(d);
+            }
             endpoints.push(match &cfg.tls {
                 Some(tls) => c.tls_config(tls.to_owned())?,
                 None => c,

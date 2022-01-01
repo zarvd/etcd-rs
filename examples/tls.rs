@@ -62,8 +62,8 @@ async fn main() -> Result<()> {
 
     let client = Client::connect(ClientConfig {
         endpoints: vec!["https://127.0.0.1:2379".to_owned()],
-        auth: None,
         tls: Some(tls),
+        ..Default::default()
     })
     .await?;
 

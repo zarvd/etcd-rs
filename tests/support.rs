@@ -84,7 +84,7 @@ impl Context {
         Client::connect(ClientConfig {
             endpoints: self.etcd_cluster.endpoints(),
             auth: self.auth.clone(),
-            tls: None,
+            ..Default::default()
         })
         .await
         .expect("connect to etcd cluster")

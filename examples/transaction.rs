@@ -85,8 +85,7 @@ async fn main() -> Result<()> {
             "http://127.0.0.1:22379".to_owned(),
             "http://127.0.0.1:32379".to_owned(),
         ],
-        auth: None,
-        tls: None,
+        ..Default::default()
     })
     .await?;
 
