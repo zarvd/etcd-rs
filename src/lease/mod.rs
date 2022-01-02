@@ -13,8 +13,7 @@
 //! async fn main() -> Result<()> {
 //!     let client = Client::connect(ClientConfig {
 //!         endpoints: vec!["http://127.0.0.1:2379".to_owned()],
-//!         auth: None,
-//!         tls: None,
+//!         ..Default::default()
 //!     }).await?;
 //!
 //!     let key = "foo";
@@ -155,18 +154,14 @@ impl Shutdown for LeaseKeepAliveTunnel {
 #[derive(Clone)]
 pub struct Lease<F: 'static + Interceptor + Clone + Sync + Send> {
     client: LeaseClient<InterceptedService<Channel, F>>,
-    keep_alive_tunnel: Arc<Lazy<LeaseKeepAliveTunnel>>,
+    keep_alive_tunnel: Option<Arc<Lazy<LeaseKeepAliveTunnel>>>,
 }
 
 impl<F: 'static + Interceptor + Clone + Sync + Send> Lease<F> {
     pub(crate) fn new(client: LeaseClient<InterceptedService<Channel, F>>) -> Self {
-        let keep_alive_tunnel = {
-            let client = client.clone();
-            Arc::new(Lazy::new(move || LeaseKeepAliveTunnel::new(client.clone())))
-        };
         Self {
             client,
-            keep_alive_tunnel,
+            keep_alive_tunnel: None,
         }
     }
 
@@ -194,31 +189,69 @@ impl<F: 'static + Interceptor + Clone + Sync + Send> Lease<F> {
     pub async fn keep_alive_responses(
         &mut self,
     ) -> Result<impl Stream<Item = Result<LeaseKeepAliveResponse>>> {
-        self.keep_alive_tunnel
+        if self.keep_alive_tunnel.is_none() {
+            let keep_alive_tunnel = {
+                let client = self.client.clone();
+                Arc::new(Lazy::new(move || LeaseKeepAliveTunnel::new(client.clone())))
+            };
+            self.keep_alive_tunnel = Some(keep_alive_tunnel);
+        }
+        let r = self
+            .keep_alive_tunnel
+            .as_ref()
+            .unwrap()
             .write()
             .await
             .resp_receiver
             .take()
             .ok_or(Error::ChannelClosed)
-            .map(UnboundedReceiverStream::new)
+            .map(UnboundedReceiverStream::new);
+        match r {
+            Ok(r) => Ok(r),
+            Err(e) => {
+                self.keep_alive_tunnel.take();
+                Err(e)
+            }
+        }
     }
 
     /// Performs a lease refreshing operation.
     pub async fn keep_alive(&mut self, req: LeaseKeepAliveRequest) -> Result<()> {
-        self.keep_alive_tunnel
+        if self.keep_alive_tunnel.is_none() {
+            let keep_alive_tunnel = {
+                let client = self.client.clone();
+                Arc::new(Lazy::new(move || LeaseKeepAliveTunnel::new(client.clone())))
+            };
+            self.keep_alive_tunnel = Some(keep_alive_tunnel);
+        }
+        let r = self
+            .keep_alive_tunnel
+            .as_ref()
+            .unwrap()
             .write()
             .await
             .req_sender
             .as_mut()
             .ok_or(Error::ChannelClosed)?
             .send(req.into())
-            .map_err(|_| Error::ChannelClosed)
+            .map_err(|_| Error::ChannelClosed);
+
+        match r {
+            Ok(r) => Ok(r),
+            Err(e) => {
+                self.keep_alive_tunnel.take();
+                Err(e)
+            }
+        }
     }
 
     /// Shut down the running lease task, if any.
     pub async fn shutdown(&mut self) -> Result<()> {
         // If we implemented `Shutdown` for this, callers would need it in scope in
         // order to call this method.
-        self.keep_alive_tunnel.evict().await
+        if let Some(ref t) = self.keep_alive_tunnel {
+            return t.evict().await;
+        }
+        Ok(())
     }
 }
