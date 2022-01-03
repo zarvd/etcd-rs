@@ -231,10 +231,7 @@ impl Event {
 
     /// Takes the key-value pair out of response, leaving a `None` in its place.
     pub fn take_kvs(&mut self) -> Option<KeyValue> {
-        match self.proto.kv.take() {
-            Some(kv) => Some(From::from(kv)),
-            _ => None,
-        }
+        self.proto.kv.take().map(From::from)
     }
 }
 

@@ -121,7 +121,7 @@ async fn main() -> Result<()> {
     })
     .await?;
 
-    // grant_lease(&client).await?;
+    grant_lease(&client).await?;
 
     {
         let client = client.clone();

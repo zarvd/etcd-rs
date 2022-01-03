@@ -81,7 +81,7 @@ impl Client {
     async fn generate_auth_token(cfg: &ClientConfig) -> Result<Option<String>> {
         use crate::AuthenticateRequest;
 
-        let channel = Self::get_channel(&cfg)?;
+        let channel = Self::get_channel(cfg)?;
 
         let mut auth_client = Auth::new(AuthClient::with_interceptor(
             channel,

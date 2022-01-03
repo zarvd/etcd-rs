@@ -13,7 +13,7 @@ etcd for Rust
 [license-url]: https://github.com/luncj/etcd-rs/blob/master/LICENSE
 
 
-An [etcd](https://github.com/etcd-io/etcd)(API v3) client for Rust, and it provides `async/await` APIs backed by [tokio](https://github.com/tokio-rs/tokio) and [tonic](https://github.com/hyperium/tonic).
+An [etcd](https://github.com/etcd-io/etcd) (API v3) client for Rust, and it provides `async/await` APIs backed by [tokio](https://github.com/tokio-rs/tokio) and [tonic](https://github.com/hyperium/tonic).
 
 Documentation on the library can be found at [docs.rs/etcd-rs](https://docs.rs/etcd-rs).
 
@@ -35,44 +35,64 @@ Add following dependencies in your project `cargo.toml`:
 
 ```toml
 [dependencies]
-etcd-rs = "0.5"
+etcd-rs = "0.6"
 ```
 
 #### Setup Client
 
 ```rust
-let endpoints = vec!["http://127.0.0.1:2379".to_owned()];
+fn foo() {
+    let endpoints = vec!["http://127.0.0.1:2379".to_owned()];
 
-let client = Client::connect(ClientConfig {
-    endpoints,
-    auth: None,
-    tls: None
-}).await;
+    let client = Client::connect(ClientConfig {
+        endpoints,
+        ..Default::default()
+    }).await;   
+}
 ```
 
 if authenticate enabled
 
 ```rust
-let endpoints = vec!["http://127.0.0.1:2379".to_owned()];
+fn foo() {
+    let endpoints = vec!["http://127.0.0.1:2379".to_owned()];
 
-let client = Client::connect(ClientConfig {
-    endpoints,
-    auth: Some(("user".to_owned(), "password".to_owned())),
-    tls: None
-}).await;
+    let client = Client::connect(ClientConfig {
+        endpoints,
+        auth: Some(("user".to_owned(), "password".to_owned())),
+        ..Default::default()
+    }).await;   
+}
 ```
 
 with tls
 
 ```rust
-let endpoints = vec!["https://127.0.0.1:2379".to_owned()];
-let tls = ClientTlsConfig::new();
+fn foo() {
+    let endpoints = vec!["https://127.0.0.1:2379".to_owned()];
+    let tls = ClientTlsConfig::new();
 
-let client = Client::connect(ClientConfig {
-    endpoints,
-    auth: Some(("user".to_owned(), "password".to_owned())),
-    tls: Some(tls)
-}).await;
+    let client = Client::connect(ClientConfig {
+        endpoints,
+        auth: Some(("user".to_owned(), "password".to_owned())),
+        tls: Some(tls),
+        ..Default::default()
+    }).await;   
+}
+```
+
+Developemnt
+----
+
+### Run tests
+
+requirements:
+- Makefile
+- docker
+- docker-compose
+
+```shell
+make test
 ```
 
 License
