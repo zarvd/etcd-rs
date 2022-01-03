@@ -18,9 +18,9 @@
 //!     }).await?;
 //!
 //!     // print out all received watch responses
-//!     let mut inbound = client.watch(KeyRange::key("foo")).await.unwrap();
+//!     let mut tunnel = client.watch_client().watch(KeyRange::key("foo")).await;
 //!     tokio::spawn(async move {
-//!         while let Some(resp) = inbound.next().await {
+//!         while let Some(resp) = tunnel.inbound().next().await {
 //!             println!("watch response: {:?}", resp);
 //!         }
 //!     });
@@ -42,16 +42,11 @@
 //!
 //! ```
 
-use std::sync::Arc;
-
-use async_trait::async_trait;
 use futures::future::FutureExt;
+use futures::stream;
 use futures::Stream;
-use tokio::sync::{
-    mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
-    oneshot,
-};
-use tokio_stream::wrappers::UnboundedReceiverStream;
+use tokio::sync::{mpsc::channel, oneshot};
+use tokio_stream::wrappers::ReceiverStream;
 use tonic::{
     service::{interceptor::InterceptedService, Interceptor},
     transport::Channel,
@@ -59,89 +54,92 @@ use tonic::{
 
 pub use watch::{WatchCancelRequest, WatchCreateRequest, WatchResponse};
 
-use crate::lazy::{Lazy, Shutdown};
-use crate::proto::etcdserverpb;
 use crate::proto::etcdserverpb::watch_client::WatchClient;
 use crate::proto::mvccpb;
 use crate::Error;
 use crate::KeyValue;
-use crate::Result;
-use std::sync::Mutex;
 
 mod watch;
 
+#[derive(Debug)]
+pub enum WatchInbound {
+    Ready(WatchResponse),
+    Interrupted(Error),
+    Closed,
+}
+
 /// WatchTunnel is a reusable connection for `Watch` operation
 /// The underlying gRPC method is Bi-directional streaming
-struct WatchTunnel {
-    req_sender: Option<UnboundedSender<etcdserverpb::WatchRequest>>,
-    resp_receiver: Option<UnboundedReceiver<Result<Option<WatchResponse>>>>,
-    shutdown: Option<oneshot::Sender<()>>,
+pub struct WatchTunnel {
+    inbound: ReceiverStream<WatchInbound>,
+    cancel: Option<oneshot::Sender<()>>,
 }
 
 impl WatchTunnel {
     fn new<F: 'static + Interceptor + Clone + Sync + Send>(
         mut client: WatchClient<InterceptedService<Channel, F>>,
+        req: WatchCreateRequest,
     ) -> Self {
-        let (req_sender, req_receiver) = unbounded_channel::<etcdserverpb::WatchRequest>();
-        let (resp_sender, resp_receiver) = unbounded_channel::<Result<Option<WatchResponse>>>();
+        let (resp_sender, resp_receiver) = channel(1024);
 
-        let request = tonic::Request::new(UnboundedReceiverStream::new(req_receiver));
-        let (shutdown_tx, shutdown_rx) = oneshot::channel();
+        let (cancel_tx, cancel_rx) = oneshot::channel();
 
         // monitor inbound watch response and transfer to the receiver
         tokio::spawn(async move {
-            let mut shutdown_rx = shutdown_rx.fuse();
-            let mut inbound = futures::select! {
-                res = client.watch(request).fuse() => {
-                    match res {
-                        Err(e) => {
-                            resp_sender.send(Err(From::from(e))).unwrap();
-                            return;
-                        },
-                        Ok(i) => i.into_inner(),
+            let mut inbound = {
+                match client.watch(stream::iter(vec![req.into()])).await {
+                    Ok(resp) => resp.into_inner(),
+                    Err(e) => {
+                        resp_sender
+                            .send(WatchInbound::Interrupted(e.into()))
+                            .await
+                            .unwrap();
+                        return;
                     }
-                },
-                _ = shutdown_rx => {
-                    resp_sender.send(Ok(None)).unwrap();
-                    return;
-                },
+                }
             };
 
+            let mut cancel = cancel_rx.fuse();
             loop {
                 let resp = futures::select! {
                     resp = inbound.message().fuse() => resp,
-                    _ = shutdown_rx => { break; },
+                    _ = cancel => { break; },
                 };
                 match resp {
                     Ok(Some(resp)) => {
-                        resp_sender.send(Ok(Some(resp.into()))).unwrap();
+                        resp_sender
+                            .send(WatchInbound::Ready(resp.into()))
+                            .await
+                            .unwrap();
                     }
                     Ok(None) => {
                         break;
                     }
                     Err(e) => {
-                        resp_sender.send(Err(e.into())).unwrap();
-                        return;
+                        resp_sender
+                            .send(WatchInbound::Interrupted(e.into()))
+                            .await
+                            .unwrap();
                     }
                 };
             }
-            resp_sender.send(Ok(None)).unwrap();
+            resp_sender.send(WatchInbound::Closed).await.unwrap();
         });
 
         Self {
-            req_sender: Some(req_sender),
-            resp_receiver: Some(resp_receiver),
-            shutdown: Some(shutdown_tx),
+            inbound: ReceiverStream::new(resp_receiver),
+            cancel: Some(cancel_tx),
         }
+    }
+
+    pub fn inbound(&mut self) -> &mut (dyn Stream<Item = WatchInbound> + Unpin + Send + Sync) {
+        &mut self.inbound
     }
 }
 
-#[async_trait]
-impl Shutdown for WatchTunnel {
-    async fn shutdown(&mut self) -> Result<()> {
-        self.req_sender.take().ok_or(Error::ChannelClosed)?;
-        self.shutdown.take().ok_or(Error::ChannelClosed)?;
-        Ok(())
+impl Drop for WatchTunnel {
+    fn drop(&mut self) {
+        let _ = self.cancel.take().unwrap().send(());
     }
 }
 
@@ -149,57 +147,24 @@ impl Shutdown for WatchTunnel {
 #[derive(Clone)]
 pub struct Watch<F: 'static + Interceptor + Clone + Sync + Send> {
     client: WatchClient<InterceptedService<Channel, F>>,
-    tunnels: Arc<Mutex<Vec<Lazy<WatchTunnel>>>>,
 }
 
 impl<F: 'static + Interceptor + Clone + Sync + Send> Watch<F> {
     pub(crate) fn new(client: WatchClient<InterceptedService<Channel, F>>) -> Self {
-        Self {
-            client,
-            tunnels: Arc::new(Mutex::new(vec![])),
-        }
+        Self { client }
     }
 
     /// Performs a watch operation.
-    pub async fn watch<C>(
-        &mut self,
-        req: C,
-    ) -> Result<impl Stream<Item = Result<Option<WatchResponse>>>>
+    pub async fn watch<Req>(&mut self, req: Req) -> WatchTunnel
     where
-        C: Into<WatchCreateRequest>,
+        Req: Into<WatchCreateRequest>,
     {
-        let tunnel = {
-            let client = self.client.clone();
-            Lazy::new(move || WatchTunnel::new(client.clone()))
-        };
-        tunnel
-            .write()
-            .await
-            .req_sender
-            .as_mut()
-            .ok_or(Error::ChannelClosed)?
-            .send(req.into().into())
-            .map_err(|_| Error::ChannelClosed)?;
-
-        let recv = tunnel.write().await.resp_receiver.take().unwrap();
-        let mut guard = self.tunnels.lock().unwrap();
-        (*guard).push(tunnel);
-        Ok(UnboundedReceiverStream::new(recv))
-    }
-
-    /// Shut down the running watch task, if any.
-    pub async fn shutdown(&mut self) -> Result<()> {
-        // If we implemented `Shutdown` for this, callers would need it in scope in
-        // order to call this method.
-        let mut guard = self.tunnels.lock().unwrap();
-        while let Some(tunnel) = (*guard).pop() {
-            let _ = tunnel.evict().await;
-        }
-        Ok(())
+        WatchTunnel::new(self.client.clone(), req.into())
     }
 }
 
 /// The kind of event.
+#[derive(Debug, PartialEq)]
 pub enum EventType {
     Put,
     Delete,
@@ -230,7 +195,7 @@ impl Event {
     }
 
     /// Takes the key-value pair out of response, leaving a `None` in its place.
-    pub fn take_kvs(&mut self) -> Option<KeyValue> {
+    pub fn take_kv(&mut self) -> Option<KeyValue> {
         self.proto.kv.take().map(From::from)
     }
 }

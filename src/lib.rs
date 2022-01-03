@@ -68,7 +68,9 @@ pub use lease::{
     LeaseRevokeRequest, LeaseRevokeResponse,
 };
 pub use response_header::ResponseHeader;
-pub use watch::{Event, EventType, Watch, WatchCancelRequest, WatchCreateRequest, WatchResponse};
+pub use watch::{
+    Event, EventType, Watch, WatchCancelRequest, WatchCreateRequest, WatchInbound, WatchResponse,
+};
 
 #[macro_use]
 mod macros;
