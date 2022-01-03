@@ -40,7 +40,7 @@ async fn test_put_and_del_kv() {
         .await
         .expect("put kv");
 
-    let mut resp = cli
+    let resp = cli
         .kv()
         .delete(DeleteRequest::new(KeyRange::key(key)))
         .await
@@ -48,7 +48,7 @@ async fn test_put_and_del_kv() {
 
     assert_eq!(1, resp.count_deleted());
 
-    let mut resp = cli
+    let resp = cli
         .kv()
         .range(RangeRequest::new(KeyRange::key(key)))
         .await

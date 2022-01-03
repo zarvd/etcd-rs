@@ -12,10 +12,10 @@ license = "MIT"
 
 [dependencies]
 tonic = { version = "0.6", features = ["tls"] }
-bytes = "1.0"
+bytes = "1.1"
 prost = "0.9"
-tokio = "1.0"
-tokio-stream = "^0.1"
+tokio = "1.15"
+tokio-stream = "0.1"
 async-stream = "0.3"
 async-trait = "0.1"
 futures = "0.3"
@@ -24,7 +24,7 @@ http = "0.2"
 rand = "0.8"
 
 [dev-dependencies]
-tokio = { version = "1.0", features = ["full"] }
+tokio = { version = "1.15", features = ["full"] }
 
 [build-dependencies]
 tonic-build = "0.6"

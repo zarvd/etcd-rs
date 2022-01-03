@@ -6,6 +6,7 @@ mod txn;
 pub use delete::{DeleteRequest, DeleteResponse};
 pub use put::{PutRequest, PutResponse};
 pub use range::{RangeRequest, RangeResponse};
+use std::ops::Range;
 pub use txn::{TxnCmp, TxnOp, TxnOpResponse, TxnRequest, TxnResponse};
 
 use tonic::{
@@ -194,5 +195,26 @@ impl KeyRange {
             end
         };
         Self { key, range_end }
+    }
+}
+
+impl<T> From<Range<T>> for KeyRange
+where
+    T: Into<Vec<u8>>,
+{
+    fn from(range: Range<T>) -> Self {
+        Self::range(range.start, range.end)
+    }
+}
+
+impl From<&str> for KeyRange {
+    fn from(k: &str) -> Self {
+        Self::key(k)
+    }
+}
+
+impl From<String> for KeyRange {
+    fn from(k: String) -> Self {
+        Self::key(k)
     }
 }

@@ -106,8 +106,6 @@ async fn keep_alive_lease(client: &Client) -> Result<()> {
                 .unwrap();
         }
     }
-
-    Ok(())
 }
 
 #[tokio::main]
