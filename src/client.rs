@@ -153,8 +153,7 @@ impl Client {
         key_range: KeyRange,
     ) -> Result<impl Stream<Item = Result<Option<WatchResponse>>>> {
         let mut wc = self.watch_client();
-        wc.watch(key_range).await?;
-        Ok(wc.take_receiver().await)
+        Ok(wc.watch(key_range).await?)
     }
 
     /// Gets a lease client.
