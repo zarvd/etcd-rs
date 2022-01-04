@@ -106,8 +106,6 @@ async fn keep_alive_lease(client: &Client) -> Result<()> {
                 .unwrap();
         }
     }
-
-    Ok(())
 }
 
 #[tokio::main]
@@ -122,7 +120,7 @@ async fn main() -> Result<()> {
     })
     .await?;
 
-    // grant_lease(&client).await?;
+    grant_lease(&client).await?;
 
     {
         let client = client.clone();

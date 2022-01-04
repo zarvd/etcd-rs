@@ -84,10 +84,7 @@ pbwrap_response!(WatchResponse);
 impl WatchResponse {
     /// Takes the header out of response, leaving a `None` in its place.
     pub fn take_header(&mut self) -> Option<ResponseHeader> {
-        match self.proto.header.take() {
-            Some(header) => Some(From::from(header)),
-            _ => None,
-        }
+        self.proto.header.take().map(From::from)
     }
 
     /// Gets the ID of the watcher that corresponds to the response.

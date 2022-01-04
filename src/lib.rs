@@ -1,14 +1,14 @@
 #![allow(
-clippy::suspicious_op_assign_impl,
-clippy::suspicious_arithmetic_impl,
-clippy::module_inception
+    clippy::suspicious_op_assign_impl,
+    clippy::suspicious_arithmetic_impl,
+    clippy::module_inception
 )]
 #![deny(
-clippy::clone_on_ref_ptr,
-clippy::dbg_macro,
-clippy::enum_glob_use,
-clippy::get_unwrap,
-clippy::macro_use_imports
+    clippy::clone_on_ref_ptr,
+    clippy::dbg_macro,
+    clippy::enum_glob_use,
+    clippy::get_unwrap,
+    clippy::macro_use_imports
 )]
 
 //! An asynchronously etcd client for Rust.
@@ -69,40 +69,8 @@ pub use lease::{
 pub use response_header::ResponseHeader;
 pub use watch::{Event, EventType, Watch, WatchCancelRequest, WatchCreateRequest, WatchResponse};
 
-macro_rules! pbwrap_request {
-    ($(#[$attr:meta])* $intern:ident => $name:ident) => {
-        $(#[$attr])*
-        pub struct $name {
-            proto: crate::proto::etcdserverpb::$intern,
-        }
-        impl From<$name> for crate::proto::etcdserverpb::$intern {
-            fn from(x: $name) -> Self {
-                x.proto
-            }
-        }
-    };
-    ($(#[$attr:meta])* $name:ident) => {
-        pbwrap_request!($(#[$attr])* $name => $name);
-    }
-}
-
-macro_rules! pbwrap_response {
-    ($(#[$attr:meta])* $intern:ident => $name:ident) => {
-        $(#[$attr])*
-        #[derive(Debug)]
-        pub struct $name {
-            proto: crate::proto::etcdserverpb::$intern,
-        }
-        impl From<crate::proto::etcdserverpb::$intern> for $name {
-            fn from(resp: crate::proto::etcdserverpb::$intern) -> Self {
-                Self { proto: resp }
-            }
-        }
-    };
-    ($(#[$attr:meta])* $name:ident) => {
-        pbwrap_response!($(#[$attr])* $name => $name);
-    }
-}
+#[macro_use]
+mod macros;
 
 mod auth;
 mod client;

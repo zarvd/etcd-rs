@@ -1,14 +1,15 @@
 use std::collections::HashMap;
-use std::future::Future;
 use std::process::Command;
+use std::time::Duration;
 
 pub struct EtcdCluster {
     nodes: HashMap<String, String>,
 }
 
+#[allow(dead_code)]
 impl EtcdCluster {
     pub fn new(with_tls: bool) -> Self {
-        let out = Command::new("make")
+        Command::new("make")
             .env("ETCD_CLUSTER_WITH_TLS", with_tls.to_string())
             .arg("setup-etcd-cluster")
             .output()
@@ -38,6 +39,7 @@ impl EtcdCluster {
             .arg("start-etcd-node")
             .output()
             .expect("start etcd node");
+        std::thread::sleep(Duration::from_secs(3));
     }
 
     pub fn stop_node(&self, i: u64) {
@@ -63,6 +65,7 @@ pub struct Context {
     auth: Option<(String, String)>,
 }
 
+#[allow(dead_code)]
 impl Context {
     pub fn new(with_tls: bool) -> Self {
         Self {

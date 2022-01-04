@@ -65,6 +65,7 @@ use crate::proto::mvccpb;
 use crate::Error;
 use crate::KeyValue;
 use crate::Result;
+use std::sync::Mutex;
 
 mod watch;
 
@@ -147,25 +148,30 @@ impl Shutdown for WatchTunnel {
 #[derive(Clone)]
 pub struct Watch<F: 'static + Interceptor + Clone + Sync + Send> {
     client: WatchClient<InterceptedService<Channel, F>>,
-    tunnel: Arc<Lazy<WatchTunnel>>,
+    tunnels: Arc<Mutex<Vec<Lazy<WatchTunnel>>>>,
 }
 
 impl<F: 'static + Interceptor + Clone + Sync + Send> Watch<F> {
     pub(crate) fn new(client: WatchClient<InterceptedService<Channel, F>>) -> Self {
-        let tunnel = {
-            let client = client.clone();
-            Arc::new(Lazy::new(move || WatchTunnel::new(client.clone())))
-        };
-
-        Self { client, tunnel }
+        Self {
+            client,
+            tunnels: Arc::new(Mutex::new(vec![])),
+        }
     }
 
     /// Performs a watch operation.
-    pub async fn watch<C>(&mut self, req: C) -> Result<()>
+    pub async fn watch<C>(
+        &mut self,
+        req: C,
+    ) -> Result<impl Stream<Item = Result<Option<WatchResponse>>>>
     where
         C: Into<WatchCreateRequest>,
     {
-        self.tunnel
+        let tunnel = {
+            let client = self.client.clone();
+            Lazy::new(move || WatchTunnel::new(client.clone()))
+        };
+        tunnel
             .write()
             .await
             .req_sender
@@ -173,19 +179,22 @@ impl<F: 'static + Interceptor + Clone + Sync + Send> Watch<F> {
             .ok_or(Error::ChannelClosed)?
             .send(req.into().into())
             .map_err(|_| Error::ChannelClosed)?;
-        Ok(())
-    }
 
-    pub async fn take_receiver(&mut self) -> impl Stream<Item = Result<Option<WatchResponse>>> {
-        let mut tunnel = self.tunnel.write().await;
-        UnboundedReceiverStream::new(tunnel.resp_receiver.take().unwrap())
+        let recv = tunnel.write().await.resp_receiver.take().unwrap();
+        let mut guard = self.tunnels.lock().unwrap();
+        (*guard).push(tunnel);
+        Ok(UnboundedReceiverStream::new(recv))
     }
 
     /// Shut down the running watch task, if any.
     pub async fn shutdown(&mut self) -> Result<()> {
         // If we implemented `Shutdown` for this, callers would need it in scope in
         // order to call this method.
-        self.tunnel.evict().await
+        let mut guard = self.tunnels.lock().unwrap();
+        while let Some(tunnel) = (*guard).pop() {
+            let _ = tunnel.evict().await;
+        }
+        Ok(())
     }
 }
 
@@ -221,10 +230,7 @@ impl Event {
 
     /// Takes the key-value pair out of response, leaving a `None` in its place.
     pub fn take_kvs(&mut self) -> Option<KeyValue> {
-        match self.proto.kv.take() {
-            Some(kv) => Some(From::from(kv)),
-            _ => None,
-        }
+        self.proto.kv.take().map(From::from)
     }
 }
 
