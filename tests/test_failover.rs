@@ -110,7 +110,7 @@ async fn test_watch_when_cluster_down() {
 
     const PREFIX: &str = "prefix-";
 
-    let mut tunnel = cli.watch_client().watch(KeyRange::prefix(PREFIX)).await;
+    let mut tunnel = cli.watch().watch(KeyRange::prefix(PREFIX)).await;
 
     assert_watch_created!(tunnel);
 
@@ -155,7 +155,7 @@ async fn test_watch_when_cluster_down() {
     put_and_get(&cli, 0).await;
     put_and_get(&cli, 0).await;
 
-    let mut tunnel = cli.watch_client().watch(KeyRange::prefix(PREFIX)).await;
+    let mut tunnel = cli.watch().watch(KeyRange::prefix(PREFIX)).await;
     assert_watch_created!(tunnel);
 
     let ops: Vec<_> = vec![

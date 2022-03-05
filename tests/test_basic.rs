@@ -115,7 +115,7 @@ async fn test_watch() {
 
     const PREFIX: &str = "prefix-test-watch";
 
-    let mut tunnel = cli.watch_client().watch(KeyRange::prefix(PREFIX)).await;
+    let mut tunnel = cli.watch().watch(KeyRange::prefix(PREFIX)).await;
 
     assert_watch_created!(tunnel);
 
@@ -146,8 +146,8 @@ async fn test_watch_multi() {
     const PREFIX1: &str = "prefix-test-watch-multi1";
     const PREFIX2: &str = "prefix-test-watch-multi2";
 
-    let mut tunnel1_1 = cli.watch_client().watch(KeyRange::prefix(PREFIX1)).await;
-    let mut tunnel2 = cli.watch_client().watch(KeyRange::prefix(PREFIX2)).await;
+    let mut tunnel1_1 = cli.watch().watch(KeyRange::prefix(PREFIX1)).await;
+    let mut tunnel2 = cli.watch().watch(KeyRange::prefix(PREFIX2)).await;
 
     assert_watch_created!(tunnel1_1);
     assert_watch_created!(tunnel2);
@@ -187,7 +187,7 @@ async fn test_watch_multi() {
     assert_ops_events!(ops_1, tunnel1_1);
     assert_ops_events!(ops_2, tunnel2);
 
-    let mut tunnel1_2 = cli.watch_client().watch(KeyRange::prefix(PREFIX1)).await;
+    let mut tunnel1_2 = cli.watch().watch(KeyRange::prefix(PREFIX1)).await;
 
     assert_watch_created!(tunnel1_2);
 

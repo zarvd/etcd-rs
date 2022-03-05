@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-
 use tonic::{
     metadata::{Ascii, MetadataValue},
     service::Interceptor,
@@ -143,7 +142,7 @@ impl Client {
     }
 
     /// Gets a watch client.
-    pub fn watch_client(&self) -> Watch<TokenInterceptor> {
+    pub fn watch(&self) -> Watch<TokenInterceptor> {
         self.inner.watch_client.clone()
     }
 

@@ -7,7 +7,7 @@ async fn watch(client: &Client) -> Result<()> {
     println!("watch key value modification");
 
     {
-        let mut tunnel = client.watch_client().watch(KeyRange::key("foo")).await;
+        let mut tunnel = client.watch().watch(KeyRange::key("foo")).await;
 
         // print out all received watch responses
         tokio::spawn(async move {

@@ -18,7 +18,7 @@
 //!     }).await?;
 //!
 //!     // print out all received watch responses
-//!     let mut tunnel = client.watch_client().watch(KeyRange::key("foo")).await;
+//!     let mut tunnel = client.watch().watch(KeyRange::key("foo")).await;
 //!     tokio::spawn(async move {
 //!         while let Some(resp) = tunnel.inbound().next().await {
 //!             println!("watch response: {:?}", resp);
