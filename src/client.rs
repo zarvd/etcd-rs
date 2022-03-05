@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use futures::Stream;
+
 use tonic::{
     metadata::{Ascii, MetadataValue},
     service::Interceptor,
@@ -12,8 +12,8 @@ use crate::proto::etcdserverpb::{
     auth_client::AuthClient, kv_client::KvClient, lease_client::LeaseClient,
     watch_client::WatchClient,
 };
-use crate::watch::WatchResponse;
-use crate::{Auth, KeyRange, Kv, Lease, Result, Watch};
+
+use crate::{Auth, Kv, Lease, Result, Watch};
 
 #[derive(Clone)]
 pub struct TokenInterceptor {
@@ -147,15 +147,6 @@ impl Client {
         self.inner.watch_client.clone()
     }
 
-    /// Perform a watch operation
-    pub async fn watch(
-        &self,
-        key_range: KeyRange,
-    ) -> Result<impl Stream<Item = Result<Option<WatchResponse>>>> {
-        let mut wc = self.watch_client();
-        Ok(wc.watch(key_range).await?)
-    }
-
     /// Gets a lease client.
     pub fn lease(&self) -> Lease<TokenInterceptor> {
         self.inner.lease_client.clone()
@@ -163,8 +154,6 @@ impl Client {
 
     /// Shut down any running tasks.
     pub async fn shutdown(&self) -> Result<()> {
-        let mut watch_client = self.inner.watch_client.clone();
-        watch_client.shutdown().await?;
         let mut lease_client = self.inner.lease_client.clone();
         lease_client.shutdown().await?;
         Ok(())

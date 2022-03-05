@@ -3,10 +3,11 @@ mod put;
 mod range;
 mod txn;
 
+use std::ops::Range;
+
 pub use delete::{DeleteRequest, DeleteResponse};
 pub use put::{PutRequest, PutResponse};
 pub use range::{RangeRequest, RangeResponse};
-use std::ops::Range;
 pub use txn::{TxnCmp, TxnOp, TxnOpResponse, TxnRequest, TxnResponse};
 
 use tonic::{

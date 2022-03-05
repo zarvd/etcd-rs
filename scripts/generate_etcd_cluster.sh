@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
 
-IMAGE=quay.io/coreos/etcd:v3.5.1
 DOCKER_COMPOSE_FILE=$1
-WITH_TLS=$2
+DOCKER_COMPOSE_FILE=${DOCKER_COMPOSE_FILE:-docker-compose.yaml}
+
+VERSION=$2
+VERSION=${VERSION:-v3.5.2}
+
+WITH_TLS=$3
+WITH_TLS=${WITH_TLS:-false}
+
+IMAGE=quay.io/coreos/etcd:${VERSION}
 
 # TODO generate TLS config
 

@@ -2,11 +2,13 @@ use std::time::Duration;
 
 use futures::StreamExt;
 use rand::Rng;
+use tokio::time::timeout;
 
 use etcd_rs::*;
 
+#[macro_use]
 mod support;
-use crate::support::Context;
+use crate::support::{Context, KVOp};
 
 async fn put_and_get(cli: &Client, retry: usize) {
     for _ in 0..=retry {
@@ -44,7 +46,7 @@ async fn expect_timeout(cli: &Client) {
         tokio::time::sleep(Duration::from_millis(100)).await;
 
         let res = cli.kv().put(PutRequest::new("foo", "bar")).await; // FIXME check specified error
-        assert!(res.is_err());
+        assert!(res.is_err(), "resp = {:?}", res);
     }
 }
 
@@ -62,6 +64,7 @@ async fn test_kv_when_node_stopped() {
 
     ctx.etcd_cluster.stop_node(2);
 
+    ctx.etcd_cluster.print_status();
     expect_timeout(&cli).await;
 
     ctx.etcd_cluster.start_node(1);
@@ -88,6 +91,7 @@ async fn test_kv_when_cluster_down() {
     ctx.etcd_cluster.stop_node(2);
     ctx.etcd_cluster.stop_node(3);
 
+    ctx.etcd_cluster.print_status();
     expect_timeout(&cli).await;
 
     ctx.etcd_cluster.start_node(1);
@@ -106,42 +110,69 @@ async fn test_watch_when_cluster_down() {
 
     const PREFIX: &str = "prefix-";
 
-    let inbound = cli.watch(KeyRange::prefix(PREFIX)).await;
+    let mut tunnel = cli.watch_client().watch(KeyRange::prefix(PREFIX)).await;
 
-    assert!(inbound.is_ok());
-    let mut inbound = inbound.unwrap();
-
-    cli.kv()
-        .put(PutRequest::new(format!("{}-foo", PREFIX), "1"))
-        .await
-        .unwrap();
+    assert_watch_created!(tunnel);
 
     ctx.etcd_cluster.stop_node(1);
     ctx.etcd_cluster.stop_node(2);
     ctx.etcd_cluster.stop_node(3);
 
-    assert!(inbound.next().await.is_some());
-    while let Some(_) = inbound.next().await {
-        // skipped
-    }
-    assert!(inbound.next().await.is_none());
+    {
+        let mut interrupted = false;
 
-    tokio::time::sleep(Duration::from_secs(3)).await;
+        for _ in 0..10 {
+            let x = timeout(Duration::from_secs(1), tunnel.inbound().next()).await;
+            match x {
+                Ok(Some(etcd_rs::WatchInbound::Interrupted(_))) => {
+                    interrupted = true;
+                    break;
+                }
+                Ok(Some(etcd_rs::WatchInbound::Closed)) => {
+                    panic!("should not close watch tunnel");
+                }
+                Err(e) => {
+                    println!("timeout: {:?}", e);
+                }
+                Ok(v) => {
+                    panic!("should not reach here: {:?}", v)
+                }
+            }
+        }
+
+        assert!(interrupted);
+    }
+
+    expect_timeout(&cli).await;
 
     ctx.etcd_cluster.start_node(1);
     ctx.etcd_cluster.start_node(2);
     ctx.etcd_cluster.start_node(3);
 
+    tokio::time::sleep(Duration::from_secs(2)).await;
+
     put_and_get(&cli, 5).await; // re-connect to cluster
     put_and_get(&cli, 0).await;
     put_and_get(&cli, 0).await;
 
-    let mut inbound = cli.watch(KeyRange::prefix(PREFIX)).await.unwrap();
+    let mut tunnel = cli.watch_client().watch(KeyRange::prefix(PREFIX)).await;
+    assert_watch_created!(tunnel);
 
-    cli.kv()
-        .put(PutRequest::new(format!("{}-bar", PREFIX), "2"))
-        .await
-        .unwrap();
+    let ops: Vec<_> = vec![
+        KVOp::Put("foo1".to_owned(), "bar1".to_owned()),
+        KVOp::Put("foo2".to_owned(), "bar2".to_owned()),
+        KVOp::Put("foo3".to_owned(), "bar3".to_owned()),
+        KVOp::Delete("foo1".to_owned()),
+        KVOp::Delete("foo2".to_owned()),
+    ]
+    .into_iter()
+    .map(|op| match op {
+        KVOp::Put(k, v) => KVOp::Put(format!("{}-{}", PREFIX, k), v),
+        KVOp::Delete(k) => KVOp::Delete(format!("{}-{}", PREFIX, k)),
+    })
+    .collect();
 
-    assert!(inbound.next().await.is_some());
+    apply_kv_ops!(cli, ops);
+
+    assert_ops_events!(ops, tunnel);
 }

@@ -92,6 +92,14 @@ impl WatchResponse {
         self.proto.watch_id as u64
     }
 
+    pub fn created(&self) -> bool {
+        self.proto.created
+    }
+
+    pub fn canceled(&self) -> bool {
+        self.proto.canceled
+    }
+
     /// Takes the events out of response, leaving an empty vector in its place.
     pub fn take_events(&mut self) -> Vec<Event> {
         let events = std::mem::take(&mut self.proto.events);
