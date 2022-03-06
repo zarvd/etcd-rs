@@ -1,36 +1,40 @@
+use crate::lease::LeaseId;
 use crate::proto::etcdserverpb;
 use crate::ResponseHeader;
 
-pbwrap_request!(
-    /// Request for refreshing lease.
-    #[derive(Debug)]
-    LeaseKeepAliveRequest
-);
+#[derive(Debug)]
+pub struct LeaseKeepAliveRequest {
+    proto: crate::proto::etcdserverpb::LeaseKeepAliveRequest,
+}
 
 impl LeaseKeepAliveRequest {
     /// Creates a new LeaseKeepAliveRequest which will refresh the specified lease.
-    pub fn new(id: u64) -> Self {
+    pub fn new(id: LeaseId) -> Self {
         Self {
             proto: etcdserverpb::LeaseKeepAliveRequest { id: id as i64 },
         }
     }
 }
 
-pbwrap_response!(LeaseKeepAliveResponse);
-
-impl LeaseKeepAliveResponse {
-    /// Takes the header out of response, leaving a `None` in its place.
-    pub fn take_header(&mut self) -> Option<ResponseHeader> {
-        self.proto.header.take().map(From::from)
+impl From<LeaseKeepAliveRequest> for crate::proto::etcdserverpb::LeaseKeepAliveRequest {
+    fn from(x: LeaseKeepAliveRequest) -> Self {
+        x.proto
     }
+}
 
-    /// Gets the lease ID for the refreshed lease.
-    pub fn id(&self) -> u64 {
-        self.proto.id as u64
-    }
+#[derive(Debug)]
+pub struct LeaseKeepAliveResponse {
+    pub header: ResponseHeader,
+    pub id: LeaseId,
+    pub ttl: u64,
+}
 
-    /// Get the new TTL for the lease.
-    pub fn ttl(&self) -> u64 {
-        self.proto.ttl as u64
+impl From<crate::proto::etcdserverpb::LeaseKeepAliveResponse> for LeaseKeepAliveResponse {
+    fn from(proto: crate::proto::etcdserverpb::LeaseKeepAliveResponse) -> Self {
+        Self {
+            header: From::from(proto.header.expect("must fetch header")),
+            id: proto.id,
+            ttl: proto.ttl as u64,
+        }
     }
 }

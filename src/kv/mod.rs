@@ -1,135 +1,97 @@
+mod compact;
 mod delete;
 mod put;
 mod range;
 mod txn;
 
-use std::ops::Range;
-
+pub use compact::{CompactRequest, CompactResponse};
 pub use delete::{DeleteRequest, DeleteResponse};
 pub use put::{PutRequest, PutResponse};
 pub use range::{RangeRequest, RangeResponse};
 pub use txn::{TxnCmp, TxnOp, TxnOpResponse, TxnRequest, TxnResponse};
 
-use tonic::{
-    service::{interceptor::InterceptedService, Interceptor},
-    transport::Channel,
-};
+use std::ops::Range;
 
-use crate::proto::etcdserverpb::kv_client::KvClient;
+use async_trait::async_trait;
+
+use crate::lease::LeaseId;
 use crate::proto::mvccpb;
-use crate::Result as Res;
+use crate::Result;
 
-/// Key-Value client.
-#[derive(Clone)]
-pub struct Kv<F> {
-    client: KvClient<InterceptedService<Channel, F>>,
-}
+#[async_trait]
+pub trait KeyValueOp {
+    async fn put<R>(&self, req: R) -> Result<PutResponse>
+    where
+        R: Into<PutRequest> + Send;
 
-impl<F: Interceptor + Clone> Kv<F> {
-    pub(crate) fn new(client: KvClient<InterceptedService<Channel, F>>) -> Self {
-        Self { client }
-    }
+    async fn get<R>(&self, req: R) -> Result<RangeResponse>
+    where
+        R: Into<RangeRequest> + Send;
+    async fn get_all(&self) -> Result<RangeResponse>;
+    async fn get_by_prefix<K>(&self, p: K) -> Result<RangeResponse>
+    where
+        K: Into<Vec<u8>> + Send;
+    async fn get_range<F, E>(&self, from: F, end: E) -> Result<RangeResponse>
+    where
+        F: Into<Vec<u8>> + Send,
+        E: Into<Vec<u8>> + Send;
 
-    /// Performs a key-value saving operation.
-    pub async fn put(&mut self, req: PutRequest) -> Res<PutResponse> {
-        let resp = self.client.put(tonic::Request::new(req.into())).await?;
+    async fn delete<R>(&self, req: R) -> Result<DeleteResponse>
+    where
+        R: Into<DeleteRequest> + Send;
+    async fn delete_all(&self) -> Result<DeleteResponse>;
+    async fn delete_by_prefix<K>(&self, p: K) -> Result<DeleteResponse>
+    where
+        K: Into<Vec<u8>> + Send;
+    async fn delete_range<F, E>(&self, from: F, end: E) -> Result<DeleteResponse>
+    where
+        F: Into<Vec<u8>> + Send,
+        E: Into<Vec<u8>> + Send;
 
-        Ok(resp.into_inner().into())
-    }
+    async fn txn<R>(&self, req: R) -> Result<TxnResponse>
+    where
+        R: Into<TxnRequest> + Send;
 
-    /// Performs a key-value fetching operation.
-    pub async fn range(&mut self, req: RangeRequest) -> Res<RangeResponse> {
-        let resp = self.client.range(tonic::Request::new(req.into())).await?;
-
-        Ok(resp.into_inner().into())
-    }
-
-    /// Performs a key-value deleting operation.
-    pub async fn delete(&mut self, req: DeleteRequest) -> Res<DeleteResponse> {
-        let resp = self
-            .client
-            .delete_range(tonic::Request::new(req.into()))
-            .await?;
-
-        Ok(resp.into_inner().into())
-    }
-
-    /// Performs a transaction operation.
-    pub async fn txn(&mut self, req: TxnRequest) -> Res<TxnResponse> {
-        let resp = self.client.txn(tonic::Request::new(req.into())).await?;
-
-        Ok(resp.into_inner().into())
-    }
+    async fn compact<R>(&self, req: R) -> Result<CompactResponse>
+    where
+        R: Into<CompactRequest> + Send;
 }
 
 /// Key-Value pair.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct KeyValue {
-    proto: mvccpb::KeyValue,
+    pub key: Vec<u8>,
+    pub value: Vec<u8>,
+    pub create_revision: i64,
+    pub mod_revision: i64,
+    pub version: i64,
+    pub lease: LeaseId,
 }
 
 impl KeyValue {
-    /// Gets the key in bytes. An empty key is not allowed.
-    pub fn key(&self) -> &[u8] {
-        &self.proto.key
-    }
-
-    /// Takes the key out of response, leaving an empty vector in its place.
-    pub fn take_key(&mut self) -> Vec<u8> {
-        std::mem::take(&mut self.proto.key)
-    }
-
     /// Converts the key from bytes `&[u8]` to `&str`.
     /// Leaves the original `&[u8]` in place, and creates a new string slice containing the entire content.
     pub fn key_str(&self) -> &str {
-        std::str::from_utf8(&self.proto.key).expect("convert bytes to string")
-    }
-
-    /// Gets the value held by the key, in bytes.
-    pub fn value(&self) -> &[u8] {
-        &self.proto.value
-    }
-
-    /// Takes the value out of response, leaving an empty vector in its place.
-    pub fn take_value(&mut self) -> Vec<u8> {
-        std::mem::take(&mut self.proto.value)
+        std::str::from_utf8(&self.key).expect("convert bytes to string")
     }
 
     /// Converts the value from bytes `&[u8]` to `&str`.
     /// Leaves the original `&[u8]` in place, and creates a new string slice containing the entire content.
     pub fn value_str(&self) -> &str {
-        std::str::from_utf8(&self.proto.value).expect("convert bytes to string")
-    }
-
-    /// Gets the revision of last creation on this key.
-    pub fn create_revision(&self) -> usize {
-        self.proto.create_revision as usize
-    }
-
-    /// Gets the revision of last modification on this key.
-    pub fn mod_revision(&self) -> usize {
-        self.proto.mod_revision as usize
-    }
-
-    /// Gets the version of the key.
-    pub fn version(&self) -> usize {
-        self.proto.version as usize
-    }
-
-    /// Gets the ID of the lease that attached to key.
-    pub fn lease(&self) -> usize {
-        self.proto.lease as usize
-    }
-
-    /// Returns `true` if this KeyValue has a lease attached, and `false` otherwise.
-    pub fn has_lease(&self) -> bool {
-        self.proto.lease != 0
+        std::str::from_utf8(&self.value).expect("convert bytes to string")
     }
 }
 
 impl From<mvccpb::KeyValue> for KeyValue {
-    fn from(kv: mvccpb::KeyValue) -> Self {
-        Self { proto: kv }
+    fn from(proto: mvccpb::KeyValue) -> Self {
+        Self {
+            key: proto.key,
+            value: proto.value,
+            create_revision: proto.create_revision,
+            mod_revision: proto.mod_revision,
+            version: proto.version,
+            lease: proto.lease,
+        }
     }
 }
 

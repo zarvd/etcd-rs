@@ -2,14 +2,18 @@ use super::{KeyRange, KeyValue};
 use crate::proto::etcdserverpb;
 use crate::ResponseHeader;
 
-pbwrap_request!(
-    /// Request for deleting key-value pairs.
-    DeleteRangeRequest => DeleteRequest
-);
+#[derive(Debug)]
+pub struct DeleteRequest {
+    proto: etcdserverpb::DeleteRangeRequest,
+}
 
 impl DeleteRequest {
     /// Creates a new DeleteRequest for the specified key range.
-    pub fn new(key_range: KeyRange) -> Self {
+    pub fn new<T>(key_range: T) -> Self
+    where
+        T: Into<KeyRange>,
+    {
+        let key_range = key_range.into();
         Self {
             proto: etcdserverpb::DeleteRangeRequest {
                 key: key_range.key,
@@ -20,34 +24,40 @@ impl DeleteRequest {
     }
 
     /// When set, responds with the key-value pair data before the update from this Delete request.
-    pub fn set_prev_kv(&mut self, prev_kv: bool) {
+    pub fn prev_kv(mut self, prev_kv: bool) -> Self {
         self.proto.prev_kv = prev_kv;
+        self
     }
 }
 
-pbwrap_response!(DeleteRangeResponse => DeleteResponse);
-
-impl DeleteResponse {
-    /// Takes the header out of response, leaving a `None` in its place.
-    pub fn take_header(&mut self) -> Option<ResponseHeader> {
-        self.proto.header.take().map(From::from)
+impl<T> From<T> for DeleteRequest
+where
+    T: Into<KeyRange>,
+{
+    fn from(key_range: T) -> Self {
+        Self::new(key_range)
     }
+}
 
-    /// Returns the number of keys deleted by the delete range request.
-    pub fn count_deleted(&self) -> usize {
-        self.proto.deleted as usize
+impl Into<etcdserverpb::DeleteRangeRequest> for DeleteRequest {
+    fn into(self) -> etcdserverpb::DeleteRangeRequest {
+        self.proto
     }
+}
 
-    /// Takes the previous key-value pairs out of response, leaving an empty vector in its place.
-    pub fn take_prev_kvs(&mut self) -> Vec<KeyValue> {
-        std::mem::take(&mut self.proto.prev_kvs)
-            .into_iter()
-            .map(From::from)
-            .collect()
-    }
+#[derive(Debug, Clone)]
+pub struct DeleteResponse {
+    pub header: ResponseHeader,
+    pub deleted: u64,
+    pub prev_kvs: Vec<KeyValue>,
+}
 
-    /// Returns `true` if the previous key-value pairs is not empty, and `false` otherwise.
-    pub fn has_prev_kvs(&self) -> bool {
-        !self.proto.prev_kvs.is_empty()
+impl From<etcdserverpb::DeleteRangeResponse> for DeleteResponse {
+    fn from(proto: etcdserverpb::DeleteRangeResponse) -> Self {
+        Self {
+            header: From::from(proto.header.expect("must fetch header")),
+            deleted: proto.deleted as u64,
+            prev_kvs: proto.prev_kvs.into_iter().map(From::from).collect(),
+        }
     }
 }

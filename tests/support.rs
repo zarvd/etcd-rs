@@ -15,7 +15,7 @@ impl EtcdCluster {
             .env("ETCD_CLUSTER_WITH_TLS", with_tls.to_string())
             .arg("setup-etcd-cluster")
             .output()
-            .expect("setup-etcd-cluster")
+            .expect("setup etcd cluster")
             .status
             .success());
         println!("etcd cluster started");
@@ -99,10 +99,14 @@ impl EtcdCluster {
 
 impl Drop for EtcdCluster {
     fn drop(&mut self) {
-        Command::new("make")
+        println!("etcd cluster stopping");
+        assert!(Command::new("make")
             .arg("teardown-etcd-cluster")
             .output()
-            .expect("teardown etcd cluster");
+            .expect("teardown etcd cluster")
+            .status
+            .success());
+        println!("etcd cluster stopped");
     }
 }
 
@@ -127,13 +131,9 @@ impl Context {
     pub async fn connect_to_cluster(&self) -> etcd_rs::Client {
         use etcd_rs::*;
 
-        Client::connect(ClientConfig {
-            endpoints: self.etcd_cluster.endpoints(),
-            auth: self.auth.clone(),
-            tls: None,
-        })
-        .await
-        .expect("connect to etcd cluster")
+        Client::connect(ClientConfig::new(self.etcd_cluster.endpoints()))
+            .await
+            .expect("connect to etcd cluster")
     }
 }
 
@@ -143,28 +143,16 @@ pub enum KVOp {
     Delete(String),
 }
 
-macro_rules! assert_watch_created {
-    ($tunnel:expr) => {
-        if let etcd_rs::WatchInbound::Ready(mut resp) = $tunnel.inbound().next().await.unwrap() {
-            assert!(resp.created());
-            assert!(resp.take_events().is_empty());
-        } else {
-            unreachable!();
-        }
-    };
-}
-
 macro_rules! apply_kv_ops {
     ($cli:expr, $ops:expr) => {
         for op in $ops.iter() {
             match op {
                 KVOp::Put(k, v) => {
-                    let resp = $cli.kv().put(PutRequest::new(k.clone(), v.clone())).await;
+                    let resp = $cli.put(PutRequest::new(k.clone(), v.clone())).await;
                     assert!(resp.is_ok());
                 }
                 KVOp::Delete(k) => {
                     let resp = $cli
-                        .kv()
                         .delete(DeleteRequest::new(KeyRange::key(k.clone())))
                         .await;
                     assert!(resp.is_ok());
@@ -175,20 +163,20 @@ macro_rules! apply_kv_ops {
 }
 
 macro_rules! assert_ops_events {
-    ($ops:expr, $tunnel:expr) => {
+    ($ops:expr, $stream:expr) => {
         let events = {
             let mut events = vec![];
 
-            while let Ok(incoming) = timeout(Duration::from_secs(1), $tunnel.inbound().next()).await
+            while let Ok(incoming) =
+                tokio::time::timeout(std::time::Duration::from_secs(1), $stream.inbound()).await
             {
-                if let Some(etcd_rs::WatchInbound::Ready(mut resp)) = incoming {
-                    for mut e in resp.take_events() {
-                        let kv = e.take_kv().unwrap();
-                        events.push(match e.event_type() {
+                if let etcd_rs::WatchInbound::Ready(resp) = incoming {
+                    for e in resp.events {
+                        events.push(match e.event_type {
                             EventType::Put => {
-                                KVOp::Put(kv.key_str().to_owned(), kv.value_str().to_owned())
+                                KVOp::Put(e.kv.key_str().to_owned(), e.kv.value_str().to_owned())
                             }
-                            EventType::Delete => KVOp::Delete(kv.key_str().to_owned()),
+                            EventType::Delete => KVOp::Delete(e.kv.key_str().to_owned()),
                         });
                     }
                 } else {

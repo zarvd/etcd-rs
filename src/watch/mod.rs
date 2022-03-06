@@ -1,65 +1,32 @@
 //! The Watch API provides an event-based interface for asynchronously monitoring changes to keys.
-//!
-//! # Examples
-//!
-//! Watch key `foo` changes
-//!
-//! ```no_run
-//! use futures::StreamExt;
-//!
-//! use etcd_rs::*;
-//!
-//! #[tokio::main]
-//! async fn main() -> Result<()> {
-//!     let client = Client::connect(ClientConfig {
-//!         endpoints: vec!["http://127.0.0.1:2379".to_owned()],
-//!         auth: None,
-//!         tls: None,
-//!     }).await?;
-//!
-//!     // print out all received watch responses
-//!     let mut tunnel = client.watch().watch(KeyRange::key("foo")).await;
-//!     tokio::spawn(async move {
-//!         while let Some(resp) = tunnel.inbound().next().await {
-//!             println!("watch response: {:?}", resp);
-//!         }
-//!     });
-//!
-//!     let key = "foo";
-//!     client.kv().put(PutRequest::new(key, "bar")).await?;
-//!     client.kv().put(PutRequest::new(key, "baz")).await?;
-//!     client
-//!         .kv()
-//!         .delete(DeleteRequest::new(KeyRange::key(key)))
-//!         .await?;
-//!
-//!     // not necessary, but will cleanly shut down the long-running tasks
-//!     // spawned by the client
-//!     client.shutdown().await;
-//!
-//!     Ok(())
-//! }
-//!
-//! ```
 
-use futures::future::FutureExt;
-use futures::stream;
-use futures::Stream;
-use tokio::sync::{mpsc::channel, oneshot};
-use tokio_stream::wrappers::ReceiverStream;
-use tonic::{
-    service::{interceptor::InterceptedService, Interceptor},
-    transport::Channel,
-};
+mod watch;
+
 
 pub use watch::{WatchCancelRequest, WatchCreateRequest, WatchResponse};
 
-use crate::proto::etcdserverpb::watch_client::WatchClient;
-use crate::proto::mvccpb;
-use crate::Error;
-use crate::KeyValue;
+use std::pin::Pin;
+use std::task::{Context, Poll};
 
-mod watch;
+use async_trait::async_trait;
+use futures::Stream;
+use tokio::sync::mpsc::Sender;
+use tonic::Streaming;
+
+use crate::proto::etcdserverpb;
+use crate::proto::mvccpb;
+use crate::{Error, KeyValue, Result};
+
+#[async_trait]
+pub trait WatchOp {
+    async fn watch<R>(&self, req: R) -> Result<(WatchStream, WatchCanceler)>
+    where
+        R: Into<WatchCreateRequest> + Send;
+
+    // async fn cancel_watch<R>(&self, req: R) -> Result<()>
+    // where
+    //     R: Into<WatchCancelRequest> + Send;
+}
 
 #[derive(Debug)]
 pub enum WatchInbound {
@@ -68,103 +35,64 @@ pub enum WatchInbound {
     Closed,
 }
 
-/// WatchTunnel is a reusable connection for `Watch` operation
-/// The underlying gRPC method is Bi-directional streaming
-pub struct WatchTunnel {
-    inbound: ReceiverStream<WatchInbound>,
-    cancel: Option<oneshot::Sender<()>>,
+pub struct WatchStream {
+    stream: Streaming<etcdserverpb::WatchResponse>,
 }
 
-impl WatchTunnel {
-    fn new<F: 'static + Interceptor + Clone + Sync + Send>(
-        mut client: WatchClient<InterceptedService<Channel, F>>,
-        req: WatchCreateRequest,
-    ) -> Self {
-        let (resp_sender, resp_receiver) = channel(1024);
+impl WatchStream {
+    pub(crate) fn new(stream: Streaming<etcdserverpb::WatchResponse>) -> Self {
+        Self { stream }
+    }
 
-        let (cancel_tx, cancel_rx) = oneshot::channel();
-
-        // monitor inbound watch response and transfer to the receiver
-        tokio::spawn(async move {
-            let mut inbound = {
-                match client.watch(stream::iter(vec![req.into()])).await {
-                    Ok(resp) => resp.into_inner(),
-                    Err(e) => {
-                        resp_sender
-                            .send(WatchInbound::Interrupted(e.into()))
-                            .await
-                            .unwrap();
-                        return;
-                    }
+    pub async fn inbound(&mut self) -> WatchInbound {
+        match self.stream.message().await {
+            Ok(Some(resp)) => {
+                if resp.canceled {
+                    WatchInbound::Closed
+                } else {
+                    WatchInbound::Ready(resp.into())
                 }
-            };
-
-            let mut cancel = cancel_rx.fuse();
-            loop {
-                let resp = futures::select! {
-                    resp = inbound.message().fuse() => resp,
-                    _ = cancel => { break; },
-                };
-                match resp {
-                    Ok(Some(resp)) => {
-                        resp_sender
-                            .send(WatchInbound::Ready(resp.into()))
-                            .await
-                            .unwrap();
-                    }
-                    Ok(None) => {
-                        break;
-                    }
-                    Err(e) => {
-                        resp_sender
-                            .send(WatchInbound::Interrupted(e.into()))
-                            .await
-                            .unwrap();
-                    }
-                };
             }
-            resp_sender.send(WatchInbound::Closed).await.unwrap();
-        });
-
-        Self {
-            inbound: ReceiverStream::new(resp_receiver),
-            cancel: Some(cancel_tx),
+            Ok(None) => WatchInbound::Closed,
+            Err(e) => WatchInbound::Interrupted(e.into()),
         }
     }
+}
 
-    pub fn inbound(&mut self) -> &mut (dyn Stream<Item = WatchInbound> + Unpin + Send + Sync) {
-        &mut self.inbound
+impl Stream for WatchStream {
+    type Item = WatchInbound;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        Pin::new(&mut self.get_mut().stream)
+            .poll_next(cx)
+            .map(|e| match e {
+                Some(Ok(resp)) => Some(WatchInbound::Ready(resp.into())),
+                Some(Err(e)) => Some(WatchInbound::Interrupted(e.into())),
+                None => Some(WatchInbound::Closed),
+            })
     }
 }
 
-impl Drop for WatchTunnel {
-    fn drop(&mut self) {
-        let _ = self.cancel.take().unwrap().send(());
-    }
+pub struct WatchCanceler {
+    watch_id: i64,
+    tx: Sender<etcdserverpb::WatchRequest>,
 }
 
-/// Watch client.
-#[derive(Clone)]
-pub struct Watch<F: 'static + Interceptor + Clone + Sync + Send> {
-    client: WatchClient<InterceptedService<Channel, F>>,
-}
-
-impl<F: 'static + Interceptor + Clone + Sync + Send> Watch<F> {
-    pub(crate) fn new(client: WatchClient<InterceptedService<Channel, F>>) -> Self {
-        Self { client }
+impl WatchCanceler {
+    pub(crate) fn new(watch_id: i64, tx: Sender<etcdserverpb::WatchRequest>) -> Self {
+        Self { watch_id, tx }
     }
 
-    /// Performs a watch operation.
-    pub async fn watch<Req>(&mut self, req: Req) -> WatchTunnel
-    where
-        Req: Into<WatchCreateRequest>,
-    {
-        WatchTunnel::new(self.client.clone(), req.into())
+    pub async fn cancel(self) -> Result<()> {
+        self.tx
+            .send(WatchCancelRequest::new(self.watch_id).into())
+            .await
+            .map_err(|e| Error::WatchChannelSend(e))
     }
 }
 
 /// The kind of event.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum EventType {
     Put,
     Delete,
@@ -181,27 +109,20 @@ impl From<mvccpb::event::EventType> for EventType {
 }
 
 /// Every change to every key is represented with Event messages.
+#[derive(Debug, Clone)]
 pub struct Event {
-    proto: mvccpb::Event,
-}
-
-impl Event {
-    /// Gets the kind of event.
-    pub fn event_type(&self) -> EventType {
-        match self.proto.r#type {
-            0 => EventType::Put,
-            _ => EventType::Delete, // FIXME: assert valid event type
-        }
-    }
-
-    /// Takes the key-value pair out of response, leaving a `None` in its place.
-    pub fn take_kv(&mut self) -> Option<KeyValue> {
-        self.proto.kv.take().map(From::from)
-    }
+    pub event_type: EventType,
+    pub kv: KeyValue,
 }
 
 impl From<mvccpb::Event> for Event {
-    fn from(event: mvccpb::Event) -> Self {
-        Self { proto: event }
+    fn from(proto: mvccpb::Event) -> Self {
+        Self {
+            event_type: match proto.r#type {
+                0 => EventType::Put,
+                _ => EventType::Delete, // FIXME: assert valid event type
+            },
+            kv: From::from(proto.kv.expect("must fetch kv")),
+        }
     }
 }

@@ -14,73 +14,37 @@
 //! An asynchronously etcd client for Rust.
 //!
 //! etcd-rs supports etcd v3 API and async/await syntax.
-//!
-//! # Examples
-//!
-//! A simple key-value read and write operation:
-//!
-//! ```no_run
-//! use etcd_rs::*;
-//!
-//! #[tokio::main]
-//! async fn main() -> Result<()> {
-//!     let client = Client::connect(ClientConfig {
-//!         endpoints: vec!["http://127.0.0.1:2379".to_owned()],
-//!         auth: None,
-//!         tls: None,
-//!     }).await?;
-//!
-//!     let key = "foo";
-//!     let value = "bar";
-//!
-//!     // Put a key-value pair
-//!     let resp = client.kv().put(PutRequest::new(key, value)).await?;
-//!
-//!     println!("Put Response: {:?}", resp);
-//!
-//!     // Get the key-value pair
-//!     let resp = client
-//!         .kv()
-//!         .range(RangeRequest::new(KeyRange::key(key)))
-//!         .await?;
-//!     println!("Range Response: {:?}", resp);
-//!
-//!     // Delete the key-valeu pair
-//!     let resp = client
-//!         .kv()
-//!         .delete(DeleteRequest::new(KeyRange::key(key)))
-//!         .await?;
-//!     println!("Delete Response: {:?}", resp);
-//!
-//!    Ok(())
-//! }
-//! ```
 
-pub use auth::{Auth, AuthenticateRequest, AuthenticateResponse};
-pub use client::{Client, ClientConfig};
-pub use error::Error;
+pub use auth::{AuthOp, AuthenticateRequest, AuthenticateResponse};
+pub use cluster::{
+    ClusterOp, Member, MemberAddRequest, MemberAddResponse, MemberListRequest, MemberListResponse,
+    MemberRemoveRequest, MemberRemoveResponse, MemberUpdateRequest, MemberUpdateResponse,
+};
 pub use kv::{
-    DeleteRequest, DeleteResponse, KeyRange, KeyValue, Kv, PutRequest, PutResponse, RangeRequest,
-    RangeResponse, TxnCmp, TxnOp, TxnOpResponse, TxnRequest, TxnResponse,
+    CompactRequest, CompactResponse, DeleteRequest, DeleteResponse, KeyRange, KeyValue, KeyValueOp,
+    PutRequest, PutResponse, RangeRequest, RangeResponse, TxnCmp, TxnOp, TxnOpResponse, TxnRequest,
+    TxnResponse,
 };
 pub use lease::{
-    Lease, LeaseGrantRequest, LeaseGrantResponse, LeaseKeepAliveRequest, LeaseKeepAliveResponse,
-    LeaseRevokeRequest, LeaseRevokeResponse,
+    LeaseGrantRequest, LeaseGrantResponse, LeaseId, LeaseKeepAliveRequest, LeaseKeepAliveResponse,
+    LeaseOp, LeaseRevokeRequest, LeaseRevokeResponse, LeaseTimeToLiveRequest,
+    LeaseTimeToLiveResponse,
 };
 pub use response_header::ResponseHeader;
 pub use watch::{
-    Event, EventType, Watch, WatchCancelRequest, WatchCreateRequest, WatchInbound, WatchResponse,
+    Event, EventType, WatchCancelRequest, WatchCreateRequest, WatchInbound, WatchOp, WatchResponse,
 };
 
-#[macro_use]
-mod macros;
+pub use client::{Client, ClientConfig};
+pub use error::Error;
 
 mod auth;
 mod client;
+mod cluster;
 mod error;
 mod kv;
-mod lazy;
 mod lease;
+mod maintenance;
 mod proto;
 mod response_header;
 mod watch;

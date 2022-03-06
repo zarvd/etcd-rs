@@ -1,51 +1,45 @@
-use futures::StreamExt;
-
-use etcd_rs::*;
-use tokio::time::Duration;
-
-async fn watch(client: &Client) -> Result<()> {
-    println!("watch key value modification");
-
-    {
-        let mut tunnel = client.watch().watch(KeyRange::key("foo")).await;
-
-        // print out all received watch responses
-        tokio::spawn(async move {
-            while let Some(resp) = tunnel.inbound().next().await {
-                println!("watch response: {:?}", resp);
-            }
-        });
-    }
-
-    let key = "foo";
-    client.kv().put(PutRequest::new(key, "bar")).await?;
-    client.kv().put(PutRequest::new(key, "baz")).await?;
-    client
-        .kv()
-        .delete(DeleteRequest::new(KeyRange::key(key)))
-        .await?;
-
-    tokio::time::sleep(Duration::from_secs(5)).await;
-
-    Ok(())
-}
+use etcd_rs::{Client, ClientConfig, KeyRange, KeyValueOp, Result, WatchInbound, WatchOp};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let client = Client::connect(ClientConfig {
-        endpoints: vec![
-            "http://127.0.0.1:12379".to_owned(),
-            "http://127.0.0.1:22379".to_owned(),
-            "http://127.0.0.1:32379".to_owned(),
-        ],
-        auth: None,
-        tls: None,
-    })
+    let cli = Client::connect(ClientConfig::new([
+        "http://127.0.0.1:12379".to_owned(),
+        "http://127.0.0.1:22379".to_owned(),
+        "http://127.0.0.1:32379".to_owned(),
+    ]))
     .await?;
 
-    watch(&client).await?;
+    let (mut stream, cancel) = cli
+        .watch(KeyRange::prefix("foo"))
+        .await
+        .expect("watch by prefix");
 
-    client.shutdown().await?;
+    tokio::spawn(async move {
+        cli.put(("foo1", "1")).await.expect("put kv");
+        cli.put(("bar", "2")).await.expect("put kv");
+        cli.put(("foo2", "3")).await.expect("put kv");
+        cli.put(("bar", "4")).await.expect("put kv");
+        cli.put(("foo2", "5")).await.expect("put kv");
+        cli.delete("foo1").await.expect("delete kv");
+        cli.delete("bar").await.expect("delete kv");
+
+        cancel.cancel().await.expect("cancel watch");
+    });
+
+    loop {
+        match stream.inbound().await {
+            WatchInbound::Ready(resp) => {
+                println!("receive event: {:?}", resp);
+            }
+            WatchInbound::Interrupted(e) => {
+                eprintln!("encounter error: {:?}", e);
+            }
+            WatchInbound::Closed => {
+                println!("watch stream closed");
+                break;
+            }
+        }
+    }
 
     Ok(())
 }

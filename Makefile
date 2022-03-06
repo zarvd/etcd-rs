@@ -3,14 +3,20 @@ ETCD_CLUSTER_WITH_TLS ?= false
 ETCD_NODE ?= etcd-1
 ETCD_VERSION ?= v3.5.2
 
+TEST_CASE ?= test_basic
+
 .PHONY: build
 build:
 	cargo build
 
 .PHONY: test
 test:
-	RUST_BACKTRACE=full cargo test -- --test-threads=1 --nocapture;
+	RUST_BACKTRACE=full cargo test -- --test-threads=1 --show-output;
 	cargo check --no-default-features
+
+.PHONY: test-one
+test-one:
+	RUST_BACKTRACE=full cargo test ${TEST_CASE} -- --test-threads=1 --show-output;
 
 .PHONY: publish
 publish:

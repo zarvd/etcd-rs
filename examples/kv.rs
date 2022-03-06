@@ -1,118 +1,59 @@
-use etcd_rs::*;
+use std::time::Duration;
 
-async fn list_prefix(client: &Client) -> Result<()> {
-    println!("List key value pairs with prefix");
+use etcd_rs::{Client, ClientConfig, KeyRange, KeyValueOp, LeaseOp, PutRequest, Result};
 
-    let prefix = "42_";
+async fn put(cli: &Client) -> Result<()> {
+    cli.put(("foo", "bar")).await.expect("put kv");
+    let resp = cli.get("foo").await.expect("get kv");
 
-    client.kv().put(PutRequest::new("41_foo1", "baz1")).await?;
-    {
-        // Put some key-value pairs
-        client.kv().put(PutRequest::new("42_foo1", "baz1")).await?;
-        client.kv().put(PutRequest::new("42_foo2", "baz2")).await?;
-        client.kv().put(PutRequest::new("42_bar1", "baz3")).await?;
-        client.kv().put(PutRequest::new("42_bar2", "baz4")).await?;
-    }
-
-    {
-        // List key-value pairs with prefix
-        let req = RangeRequest::new(KeyRange::prefix(prefix));
-        let mut resp = client.kv().range(req).await?;
-
-        println!("Range Response: {:?}", resp);
-        for kv in resp.take_kvs() {
-            println!("{:?} -> {:?}", kv.key_str(), kv.value_str());
-        }
-    }
-
-    {
-        // Delete key-valeu pairs with prefix
-        let req = DeleteRequest::new(KeyRange::prefix(prefix));
-        let resp = client.kv().delete(req).await?;
-        println!("Delete Response: {:?}", resp);
-    }
+    assert_eq!(resp.kvs.len(), 1);
+    assert_eq!(resp.kvs[0].key_str(), "foo");
+    assert_eq!(resp.kvs[0].value_str(), "bar");
 
     Ok(())
 }
 
-async fn list_all(client: &Client) -> Result<()> {
-    println!("List all key value pairs");
-    {
-        // Put some key-value pairs
-        client.kv().put(PutRequest::new("foo1", "baz1")).await?;
-        client.kv().put(PutRequest::new("foo2", "baz2")).await?;
-        client.kv().put(PutRequest::new("bar1", "baz3")).await?;
-        client.kv().put(PutRequest::new("bar2", "baz4")).await?;
-    }
-
-    {
-        // List all key-value pairs
-        let req = {
-            let mut req = RangeRequest::new(KeyRange::all());
-            req.set_limit(4); // Only returns 4 key-value pairs
-            req
-        };
-        let resp = client.kv().range(req).await?;
-        println!("Range Response: {:?}", resp);
-    }
-
-    {
-        // Delete all key-valeu pairs
-        let req = DeleteRequest::new(KeyRange::all());
-        let resp = client.kv().delete(req).await?;
-        println!("Delete Response: {:?}", resp);
-    }
+async fn put_with_lease(cli: &Client) -> Result<()> {
+    let lease = cli
+        .grant_lease(Duration::from_secs(10))
+        .await
+        .expect("grant lease");
+    cli.put(PutRequest::new("foo", "bar").lease(lease.id))
+        .await
+        .expect("put kv with lease");
 
     Ok(())
 }
 
-async fn put_and_get(client: &Client) -> Result<()> {
-    println!("Put and get a key value pairs");
+async fn get(cli: &Client) -> Result<()> {
+    cli.get(KeyRange::range("start", "end"))
+        .await
+        .expect("get range kvs");
+    cli.get_range("start", "end").await.expect("get range kvs");
 
-    let key = "foo";
-    let value = "bar";
+    cli.get(KeyRange::all()).await.expect("get all kvs");
+    cli.get_all().await.expect("get all kvs");
 
-    {
-        // Put a key-value pair
-        let req = PutRequest::new(key, value);
-        let resp = client.kv().put(req).await?;
-
-        println!("Put Response: {:?}", resp);
-    }
-
-    {
-        // Get the key-value pair
-        let req = RangeRequest::new(KeyRange::key(key));
-        let resp = client.kv().range(req).await?;
-        println!("Range Response: {:?}", resp);
-    }
-
-    {
-        // Delete the key-valeu pair
-        let req = DeleteRequest::new(KeyRange::key(key));
-        let resp = client.kv().delete(req).await?;
-        println!("Delete Response: {:?}", resp);
-    }
+    cli.get(KeyRange::prefix("foo"))
+        .await
+        .expect("get by prefix");
+    cli.get_by_prefix("foo").await.expect("get by prefix");
 
     Ok(())
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let client = Client::connect(ClientConfig {
-        endpoints: vec![
-            "http://127.0.0.1:12379".to_owned(),
-            "http://127.0.0.1:22379".to_owned(),
-            "http://127.0.0.1:32379".to_owned(),
-        ],
-        auth: None,
-        tls: None,
-    })
+    let cli = Client::connect(ClientConfig::new([
+        "http://127.0.0.1:12379".to_owned(),
+        "http://127.0.0.1:22379".to_owned(),
+        "http://127.0.0.1:32379".to_owned(),
+    ]))
     .await?;
 
-    put_and_get(&client).await?;
-    list_all(&client).await?;
-    list_prefix(&client).await?;
+    put(&cli).await?;
+    put_with_lease(&cli).await?;
+    get(&cli).await?;
 
     Ok(())
 }
