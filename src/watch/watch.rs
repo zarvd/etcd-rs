@@ -18,6 +18,8 @@ impl WatchCreateRequest {
                 progress_notify: false,
                 filters: vec![], // TODO support filters
                 prev_kv: false,
+                fragment: false, // TODO support fragment
+                watch_id: 0,     // TODO support watch_id
             },
         }
     }

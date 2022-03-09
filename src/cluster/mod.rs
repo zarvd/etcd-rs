@@ -36,6 +36,7 @@ pub struct Member {
     pub name: String,
     pub peer_urls: Vec<String>,
     pub client_urls: Vec<String>,
+    pub is_learner: bool,
 }
 
 impl From<etcdserverpb::Member> for Member {
@@ -45,6 +46,7 @@ impl From<etcdserverpb::Member> for Member {
             name: proto.name,
             peer_urls: proto.peer_ur_ls,
             client_urls: proto.client_ur_ls,
+            is_learner: proto.is_learner,
         }
     }
 }
@@ -56,6 +58,7 @@ impl Into<etcdserverpb::Member> for Member {
             name: self.name,
             peer_ur_ls: self.peer_urls,
             client_ur_ls: self.client_urls,
+            is_learner: self.is_learner,
         }
     }
 }
