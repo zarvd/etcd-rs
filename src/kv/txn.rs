@@ -6,10 +6,10 @@ use crate::ResponseHeader;
 use etcdserverpb::compare::{CompareResult, CompareTarget, TargetUnion};
 use etcdserverpb::Compare;
 
-pbwrap_request!(
-    /// Request for performing transaction operations.
-    TxnRequest
-);
+#[derive(Debug)]
+pub struct TxnRequest {
+    proto: etcdserverpb::TxnRequest,
+}
 
 impl TxnRequest {
     /// Creates a new TxnRequest.
@@ -108,6 +108,12 @@ impl Default for TxnRequest {
     }
 }
 
+impl From<TxnRequest> for crate::proto::etcdserverpb::TxnRequest {
+    fn from(x: TxnRequest) -> Self {
+        x.proto
+    }
+}
+
 /// Transaction Operation.
 pub enum TxnOp {
     Range(RangeRequest),
@@ -175,6 +181,7 @@ impl From<TxnCmp> for CompareResult {
 }
 
 /// Response transaction operation.
+#[derive(Debug, Clone)]
 pub enum TxnOpResponse {
     Range(RangeResponse),
     Put(PutResponse),
@@ -194,24 +201,19 @@ impl From<etcdserverpb::ResponseOp> for TxnOpResponse {
     }
 }
 
-pbwrap_response!(TxnResponse);
+#[derive(Debug, Clone)]
+pub struct TxnResponse {
+    pub header: ResponseHeader,
+    pub succeeded: bool,
+    pub responses: Vec<TxnOpResponse>,
+}
 
-impl TxnResponse {
-    /// Takes the header out of response, leaving a `None` in its place.
-    pub fn take_header(&mut self) -> Option<ResponseHeader> {
-        self.proto.header.take().map(From::from)
-    }
-
-    /// Returns `true` if the compare evaluated to true, and `false` otherwise.
-    pub fn is_success(&self) -> bool {
-        self.proto.succeeded
-    }
-
-    /// Takes the responses corresponding to the results from applying the Success block if succeeded is true or the Failure if succeeded is false.
-    pub fn take_responses(&mut self) -> Vec<TxnOpResponse> {
-        std::mem::take(&mut self.proto.responses)
-            .into_iter()
-            .map(From::from)
-            .collect()
+impl From<etcdserverpb::TxnResponse> for TxnResponse {
+    fn from(proto: etcdserverpb::TxnResponse) -> Self {
+        Self {
+            header: From::from(proto.header.expect("must fetch header")),
+            succeeded: proto.succeeded,
+            responses: proto.responses.into_iter().map(From::from).collect(),
+        }
     }
 }

@@ -1,12 +1,13 @@
 use std::time::Duration;
 
+use crate::lease::LeaseId;
 use crate::proto::etcdserverpb;
 use crate::ResponseHeader;
 
-pbwrap_request!(
-    /// Request for granting lease.
-    LeaseGrantRequest
-);
+#[derive(Debug)]
+pub struct LeaseGrantRequest {
+    proto: crate::proto::etcdserverpb::LeaseGrantRequest,
+}
 
 impl LeaseGrantRequest {
     /// Creates a new LeaseGrantRequest with the specified TTL.
@@ -20,26 +21,37 @@ impl LeaseGrantRequest {
     }
 
     /// Set custom lease ID.
-    pub fn set_id(&mut self, id: u64) {
-        self.proto.id = id as i64;
+    pub fn with_id(mut self, id: LeaseId) -> Self {
+        self.proto.id = id as LeaseId;
+        self
     }
 }
 
-pbwrap_response!(LeaseGrantResponse);
-
-impl LeaseGrantResponse {
-    /// Takes the header out of response, leaving a `None` in its place.
-    pub fn take_header(&mut self) -> Option<ResponseHeader> {
-        self.proto.header.take().map(From::from)
+impl From<LeaseGrantRequest> for crate::proto::etcdserverpb::LeaseGrantRequest {
+    fn from(x: LeaseGrantRequest) -> Self {
+        x.proto
     }
+}
 
-    /// Gets the lease ID for the granted lease.
-    pub fn id(&self) -> u64 {
-        self.proto.id as u64
+impl From<Duration> for LeaseGrantRequest {
+    fn from(ttl: Duration) -> Self {
+        Self::new(ttl)
     }
+}
 
-    /// Gets the server chosen lease time-to-live in seconds.
-    pub fn ttl(&self) -> u64 {
-        self.proto.ttl as u64
+#[derive(Debug, Clone)]
+pub struct LeaseGrantResponse {
+    pub header: ResponseHeader,
+    pub id: LeaseId,
+    pub ttl: u64,
+}
+
+impl From<crate::proto::etcdserverpb::LeaseGrantResponse> for LeaseGrantResponse {
+    fn from(proto: crate::proto::etcdserverpb::LeaseGrantResponse) -> Self {
+        Self {
+            header: From::from(proto.header.expect("must fetch header")),
+            id: proto.id,
+            ttl: proto.ttl as u64,
+        }
     }
 }

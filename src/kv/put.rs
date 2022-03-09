@@ -1,11 +1,12 @@
+use super::KeyValue;
+use crate::lease::LeaseId;
 use crate::proto::etcdserverpb;
-use crate::KeyValue;
 use crate::ResponseHeader;
 
-pbwrap_request!(
-    /// Request for putting key-value.
-    PutRequest
-);
+#[derive(Debug)]
+pub struct PutRequest {
+    proto: etcdserverpb::PutRequest,
+}
 
 impl PutRequest {
     /// Creates a new PutRequest for saving the specified key-value.
@@ -28,36 +29,57 @@ impl PutRequest {
 
     /// Sets the lease ID to associate with the key in the key-value store.
     /// A lease value of 0 indicates no lease.
-    pub fn set_lease(&mut self, lease: u64) {
+    pub fn lease(mut self, lease: LeaseId) -> Self {
         self.proto.lease = lease as i64;
+        self
     }
 
     /// When set, responds with the key-value pair data before the update from this Put request.
-    pub fn set_prev_kv(&mut self, prev_kv: bool) {
+    pub fn prev_kv(mut self, prev_kv: bool) -> Self {
         self.proto.prev_kv = prev_kv;
+        self
     }
 
     /// When set, update the key without changing its current value. Returns an error if the key does not exist.
-    pub fn set_ignore_value(&mut self, ignore_value: bool) {
-        self.proto.ignore_value = ignore_value;
+    pub fn ignore_value(mut self) -> Self {
+        self.proto.ignore_value = true;
+        self
     }
 
     /// When set, update the key without changing its current lease. Returns an error if the key does not exist.
-    pub fn set_ignore_lease(&mut self, ignore_lease: bool) {
-        self.proto.ignore_lease = ignore_lease;
+    pub fn ignore_lease(mut self) -> Self {
+        self.proto.ignore_lease = true;
+        self
     }
 }
 
-pbwrap_response!(PutResponse);
-
-impl PutResponse {
-    /// Takes the header out of response, leaving a `None` in its place.
-    pub fn take_header(&mut self) -> Option<ResponseHeader> {
-        self.proto.header.take().map(From::from)
+impl From<PutRequest> for etcdserverpb::PutRequest {
+    fn from(x: PutRequest) -> Self {
+        x.proto
     }
+}
 
-    /// Takes the previous key-value pair out of response, leaving a `None` in its place.
-    pub fn take_prev_kv(&mut self) -> Option<KeyValue> {
-        self.proto.prev_kv.take().map(From::from)
+impl<K, V> From<(K, V)> for PutRequest
+where
+    K: Into<Vec<u8>>,
+    V: Into<Vec<u8>>,
+{
+    fn from(kv: (K, V)) -> Self {
+        Self::new(kv.0, kv.1)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct PutResponse {
+    pub header: ResponseHeader,
+    pub prev_kv: KeyValue,
+}
+
+impl From<etcdserverpb::PutResponse> for PutResponse {
+    fn from(proto: etcdserverpb::PutResponse) -> Self {
+        Self {
+            header: From::from(proto.header.expect("must fetch header")),
+            prev_kv: From::from(proto.prev_kv.unwrap_or(Default::default())),
+        }
     }
 }

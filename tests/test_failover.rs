@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use futures::StreamExt;
 use rand::Rng;
 use tokio::time::timeout;
 
@@ -16,19 +15,18 @@ async fn put_and_get(cli: &Client, retry: usize) {
 
         let k = format!("key-{}", rand::thread_rng().gen::<u64>());
         let v = rand::thread_rng().gen::<u64>().to_string();
-        let r = cli.kv().put(PutRequest::new(k.clone(), v.clone())).await;
+        let r = cli.put(PutRequest::new(k.clone(), v.clone())).await;
         if let Some(e) = r.err() {
             eprintln!("failed to put kv (will retry): {:?}", e);
             continue;
         }
 
-        let r = cli.kv().range(RangeRequest::new(KeyRange::key(k))).await;
+        let r = cli.get(k).await;
 
         match r {
-            Ok(mut resp) => {
-                assert_eq!(1, resp.count());
-                let kvs = resp.take_kvs();
-                assert_eq!(&v, kvs[0].value_str());
+            Ok(resp) => {
+                assert_eq!(1, resp.count);
+                assert_eq!(&v, resp.kvs[0].value_str());
 
                 return;
             }
@@ -45,7 +43,7 @@ async fn expect_timeout(cli: &Client) {
     for _ in 0..3 {
         tokio::time::sleep(Duration::from_millis(100)).await;
 
-        let res = cli.kv().put(PutRequest::new("foo", "bar")).await; // FIXME check specified error
+        let res = cli.put(PutRequest::new("foo", "bar")).await; // FIXME check specified error
         assert!(res.is_err(), "resp = {:?}", res);
     }
 }
@@ -110,9 +108,10 @@ async fn test_watch_when_cluster_down() {
 
     const PREFIX: &str = "prefix-";
 
-    let mut tunnel = cli.watch().watch(KeyRange::prefix(PREFIX)).await;
-
-    assert_watch_created!(tunnel);
+    let (mut stream, _cancel) = cli
+        .watch(KeyRange::prefix(PREFIX))
+        .await
+        .expect("watch created");
 
     ctx.etcd_cluster.stop_node(1);
     ctx.etcd_cluster.stop_node(2);
@@ -122,14 +121,14 @@ async fn test_watch_when_cluster_down() {
         let mut interrupted = false;
 
         for _ in 0..10 {
-            let x = timeout(Duration::from_secs(1), tunnel.inbound().next()).await;
+            let x = timeout(Duration::from_secs(1), stream.inbound()).await;
             match x {
-                Ok(Some(etcd_rs::WatchInbound::Interrupted(_))) => {
+                Ok(etcd_rs::WatchInbound::Interrupted(_)) => {
                     interrupted = true;
                     break;
                 }
-                Ok(Some(etcd_rs::WatchInbound::Closed)) => {
-                    panic!("should not close watch tunnel");
+                Ok(etcd_rs::WatchInbound::Closed) => {
+                    panic!("should not close watch stream");
                 }
                 Err(e) => {
                     println!("timeout: {:?}", e);
@@ -155,8 +154,10 @@ async fn test_watch_when_cluster_down() {
     put_and_get(&cli, 0).await;
     put_and_get(&cli, 0).await;
 
-    let mut tunnel = cli.watch().watch(KeyRange::prefix(PREFIX)).await;
-    assert_watch_created!(tunnel);
+    let (mut stream, _cancel) = cli
+        .watch(KeyRange::prefix(PREFIX))
+        .await
+        .expect("watch created");
 
     let ops: Vec<_> = vec![
         KVOp::Put("foo1".to_owned(), "bar1".to_owned()),
@@ -174,5 +175,5 @@ async fn test_watch_when_cluster_down() {
 
     apply_kv_ops!(cli, ops);
 
-    assert_ops_events!(ops, tunnel);
+    assert_ops_events!(ops, stream);
 }

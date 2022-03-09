@@ -13,3 +13,7 @@ pub mod etcdserverpb {
 pub mod v3lockpb {
     tonic::include_proto!("v3lockpb");
 }
+
+pub mod v3electionpb {
+    tonic::include_proto!("v3electionpb");
+}

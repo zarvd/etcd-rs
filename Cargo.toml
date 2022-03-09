@@ -1,11 +1,11 @@
 [package]
 name = "etcd-rs"
-version = "0.6.0"
-authors = ["luncj <jialun.cai@pm.me>"]
+version = "1.0.0-alpha.0"
+authors = ["lodrem <jialun.cai@pm.me>"]
 edition = "2021"
 keywords = ["etcd", "future", "async"]
-repository = "https://github.com/luncj/etcd-rs"
-homepage = "https://github.com/luncj/etcd-rs"
+repository = "https://github.com/lodrem/etcd-rs"
+homepage = "https://github.com/lodrem/etcd-rs"
 description = "etcd client for rust"
 documentation = "https://docs.rs/etcd-rs"
 license = "MIT"
@@ -13,7 +13,7 @@ license = "MIT"
 [dependencies]
 tonic = { version = "0.6", features = ["tls"] }
 prost = "0.9"
-tokio = "1.15"
+tokio = "1.17"
 tokio-stream = "0.1"
 async-trait = "0.1"
 futures = "0.3"
@@ -21,7 +21,7 @@ thiserror = "1.0"
 http = "0.2"
 
 [dev-dependencies]
-tokio = { version = "1.15", features = ["full"] }
+tokio = { version = "1.17", features = ["full"] }
 rand = "0.8"
 
 [build-dependencies]
