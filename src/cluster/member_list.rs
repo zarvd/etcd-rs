@@ -9,7 +9,11 @@ pub struct MemberListRequest {
 impl MemberListRequest {
     pub fn new() -> Self {
         Self {
-            proto: etcdserverpb::MemberListRequest {},
+            proto: etcdserverpb::MemberListRequest {
+                // default true
+                // https://github.com/etcd-io/etcd/blob/v3.5.2/client/v3/cluster.go#L127
+                linearizable: true,
+            },
         }
     }
 }

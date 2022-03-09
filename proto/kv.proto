@@ -1,5 +1,4 @@
 syntax = "proto3";
-
 package mvccpb;
 
 message KeyValue {
