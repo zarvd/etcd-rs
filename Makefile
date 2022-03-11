@@ -11,12 +11,12 @@ build:
 
 .PHONY: test
 test:
-	RUST_BACKTRACE=full cargo test -- --test-threads=1 --show-output;
+	cargo nextest run --test-threads=1
 	cargo check --no-default-features
 
 .PHONY: test-one
 test-one:
-	RUST_BACKTRACE=full cargo test ${TEST_CASE} -- --test-threads=1 --show-output;
+	cargo nextest run --test ${TEST_CASE} --test-threads=1
 
 .PHONY: publish
 publish:

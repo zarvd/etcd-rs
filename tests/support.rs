@@ -167,23 +167,25 @@ macro_rules! assert_ops_events {
         let events = {
             let mut events = vec![];
 
-            while let Ok(incoming) =
-                tokio::time::timeout(std::time::Duration::from_secs(1), $stream.inbound()).await
-            {
-                if let etcd_rs::WatchInbound::Ready(resp) = incoming {
-                    for e in resp.events {
-                        events.push(match e.event_type {
-                            EventType::Put => {
-                                KVOp::Put(e.kv.key_str().to_owned(), e.kv.value_str().to_owned())
-                            }
-                            EventType::Delete => KVOp::Delete(e.kv.key_str().to_owned()),
-                        });
+            loop {
+                match tokio::time::timeout(std::time::Duration::from_secs(1), $stream.inbound())
+                    .await
+                {
+                    Ok(etcd_rs::WatchInbound::Ready(resp)) => {
+                        for e in resp.events {
+                            events.push(match e.event_type {
+                                EventType::Put => KVOp::Put(
+                                    e.kv.key_str().to_owned(),
+                                    e.kv.value_str().to_owned(),
+                                ),
+                                EventType::Delete => KVOp::Delete(e.kv.key_str().to_owned()),
+                            });
+                        }
                     }
-                } else {
-                    unreachable!();
+                    Ok(etcd_rs::WatchInbound::Closed) => break,
+                    _ => unreachable!(),
                 }
             }
-
             events
         };
 

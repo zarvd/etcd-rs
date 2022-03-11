@@ -11,7 +11,7 @@ async fn test_watch() {
 
     const PREFIX: &str = "prefix-test-watch";
 
-    let (mut stream, _cancel) = cli
+    let (mut stream, cancel) = cli
         .watch(KeyRange::prefix(PREFIX))
         .await
         .expect("watch created");
@@ -32,6 +32,8 @@ async fn test_watch() {
 
     apply_kv_ops!(cli, ops);
 
+    cancel.cancel().await.expect("watch canceled");
+
     assert_ops_events!(ops, stream);
 }
 
@@ -43,11 +45,11 @@ async fn test_watch_multi() {
     const PREFIX1: &str = "prefix-test-watch-multi1";
     const PREFIX2: &str = "prefix-test-watch-multi2";
 
-    let (mut stream1_1, _cancel) = cli
+    let (mut stream1, cancel1) = cli
         .watch(KeyRange::prefix(PREFIX1))
         .await
         .expect("watch created");
-    let (mut stream2, _cancel) = cli
+    let (mut stream2, cancel2) = cli
         .watch(KeyRange::prefix(PREFIX2))
         .await
         .expect("watch created");
@@ -84,30 +86,9 @@ async fn test_watch_multi() {
     apply_kv_ops!(cli, ops_1);
     apply_kv_ops!(cli, ops_2);
 
-    assert_ops_events!(ops_1, stream1_1);
+    cancel1.cancel().await.expect("watch canceled");
+    cancel2.cancel().await.expect("watch canceled");
+
+    assert_ops_events!(ops_1, stream1);
     assert_ops_events!(ops_2, stream2);
-
-    let (mut stream1_2, _cancel) = cli
-        .watch(KeyRange::prefix(PREFIX1))
-        .await
-        .expect("watch created");
-
-    let ops_1: Vec<_> = vec![
-        KVOp::Put("foo4".to_owned(), "bar4".to_owned()),
-        KVOp::Put("foo5".to_owned(), "bar5".to_owned()),
-        KVOp::Put("foo6".to_owned(), "bar6".to_owned()),
-        KVOp::Delete("foo4".to_owned()),
-        KVOp::Delete("foo5".to_owned()),
-    ]
-    .into_iter()
-    .map(|op| match op {
-        KVOp::Put(k, v) => KVOp::Put(format!("{}-{}", PREFIX1, k), v),
-        KVOp::Delete(k) => KVOp::Delete(format!("{}-{}", PREFIX1, k)),
-    })
-    .collect();
-
-    apply_kv_ops!(cli, ops_1);
-
-    assert_ops_events!(ops_1, stream1_1);
-    assert_ops_events!(ops_1, stream1_2);
 }

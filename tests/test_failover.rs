@@ -154,7 +154,7 @@ async fn test_watch_when_cluster_down() {
     put_and_get(&cli, 0).await;
     put_and_get(&cli, 0).await;
 
-    let (mut stream, _cancel) = cli
+    let (mut stream, cancel) = cli
         .watch(KeyRange::prefix(PREFIX))
         .await
         .expect("watch created");
@@ -174,6 +174,8 @@ async fn test_watch_when_cluster_down() {
     .collect();
 
     apply_kv_ops!(cli, ops);
+
+    cancel.cancel().await.expect("watch canceled");
 
     assert_ops_events!(ops, stream);
 }
