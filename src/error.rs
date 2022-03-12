@@ -2,6 +2,8 @@ use crate::proto::etcdserverpb;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+    #[error("io error")]
+    IOError(#[from] std::io::Error),
     #[error("invalid URI")]
     InvalidURI(#[from] http::uri::InvalidUri),
     #[error("gRPC transport error")]

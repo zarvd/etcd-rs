@@ -1,12 +1,13 @@
-use async_trait::async_trait;
 use std::time::Duration;
+
+use async_trait::async_trait;
 use tokio::sync::mpsc::channel;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{
     codegen::InterceptedService,
     metadata::{Ascii, MetadataValue},
     service::Interceptor,
-    transport::{Channel, ClientTlsConfig},
+    transport::Channel,
     Request, Status,
 };
 
@@ -58,45 +59,118 @@ impl Interceptor for TokenInterceptor {
     }
 }
 
+#[cfg(feature = "tls")]
+#[derive(Debug, Clone)]
+enum TlsOption {
+    None,
+    WithConfig(tonic::transport::ClientTlsConfig),
+}
+
+#[cfg(not(feature = "tls"))]
+#[derive(Debug, Clone)]
+enum TlsOption {
+    None,
+}
+
+#[derive(Debug, Clone)]
+pub struct Endpoint {
+    url: String,
+
+    tls_opt: TlsOption,
+}
+
+impl Endpoint {
+    pub fn new(url: impl Into<String>) -> Self {
+        Self {
+            url: url.into(),
+            tls_opt: TlsOption::None,
+        }
+    }
+
+    #[cfg(feature = "tls")]
+    pub fn tls_raw(
+        mut self,
+        domain_name: impl Into<String>,
+        ca_cert: impl AsRef<[u8]>,
+        client_cert: impl AsRef<[u8]>,
+        client_key: impl AsRef<[u8]>,
+    ) -> Self {
+        use tonic::transport::{Certificate, ClientTlsConfig, Identity};
+
+        let certificate = Certificate::from_pem(ca_cert);
+        let identity = Identity::from_pem(client_cert, client_key);
+
+        self.tls_opt = TlsOption::WithConfig(
+            ClientTlsConfig::new()
+                .domain_name(domain_name)
+                .ca_certificate(certificate)
+                .identity(identity),
+        );
+
+        self
+    }
+
+    #[cfg(feature = "tls")]
+    pub async fn tls(
+        self,
+        domain_name: impl Into<String>,
+        ca_cert_path: impl AsRef<std::path::Path>,
+        client_cert_path: impl AsRef<std::path::Path>,
+        client_key_path: impl AsRef<std::path::Path>,
+    ) -> Result<Self> {
+        use tokio::fs::read;
+
+        let ca_cert = read(ca_cert_path).await?;
+
+        let client_cert = read(client_cert_path).await?;
+        let client_key = read(client_key_path).await?;
+
+        Ok(self.tls_raw(domain_name, ca_cert, client_cert, client_key))
+    }
+}
+
+impl<T> From<T> for Endpoint
+where
+    T: Into<String>,
+{
+    fn from(url: T) -> Self {
+        Self {
+            url: url.into(),
+            tls_opt: TlsOption::None,
+        }
+    }
+}
+
 /// Config for establishing etcd client.
 #[derive(Clone, Debug)]
 pub struct ClientConfig {
-    pub endpoints: Vec<String>,
+    pub endpoints: Vec<Endpoint>,
     pub auth: Option<(String, String)>,
-    pub tls: Option<ClientTlsConfig>,
     pub connect_timeout: Duration,
     pub http2_keep_alive_interval: Duration,
 }
 
 impl ClientConfig {
-    pub fn new<I>(endpoints: I) -> Self
-    where
-        I: Into<Vec<String>>,
-    {
+    pub fn new(endpoints: impl Into<Vec<Endpoint>>) -> Self {
         Self {
             endpoints: endpoints.into(),
             auth: None,
-            tls: None,
             connect_timeout: Duration::from_secs(30),
             http2_keep_alive_interval: Duration::from_secs(5),
         }
     }
 
-    pub fn with_auth<N, P>(mut self, name: N, password: P) -> Self
-    where
-        N: Into<String>,
-        P: Into<String>,
-    {
+    pub fn auth(mut self, name: impl Into<String>, password: impl Into<String>) -> Self {
         self.auth = Some((name.into(), password.into()));
         self
     }
 
-    pub fn with_connect_timeout(mut self, timeout: Duration) -> Self {
+    pub fn connect_timeout(mut self, timeout: Duration) -> Self {
         self.connect_timeout = timeout;
         self
     }
 
-    pub fn with_http2_keep_alive_interval(mut self, interval: Duration) -> Self {
+    pub fn http2_keep_alive_interval(mut self, interval: Duration) -> Self {
         self.http2_keep_alive_interval = interval;
         self
     }
@@ -120,14 +194,18 @@ impl Client {
         let channel = {
             let mut endpoints = Vec::with_capacity(cfg.endpoints.len());
             for e in cfg.endpoints.iter() {
-                let c = Channel::from_shared(e.to_owned())?
+                let mut c = Channel::from_shared(e.url.clone())?
                     .connect_timeout(cfg.connect_timeout)
                     .http2_keep_alive_interval(cfg.http2_keep_alive_interval);
 
-                endpoints.push(match &cfg.tls {
-                    Some(tls) => c.tls_config(tls.to_owned())?,
-                    None => c,
-                });
+                #[cfg(feature = "tls")]
+                {
+                    if let TlsOption::WithConfig(tls) = e.tls_opt.clone() {
+                        c = c.tls_config(tls)?;
+                    }
+                }
+
+                endpoints.push(c);
             }
 
             Channel::balance_list(endpoints.into_iter())

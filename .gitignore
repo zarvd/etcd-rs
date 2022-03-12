@@ -3,3 +3,5 @@
 Cargo.lock
 .idea/
 etcd-docker-compose.yaml
+etcd
+*.tar.gz
