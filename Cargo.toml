@@ -10,8 +10,12 @@ description = "etcd client for rust"
 documentation = "https://docs.rs/etcd-rs"
 license = "MIT"
 
+[features]
+default = ["tls"]
+tls = ["tonic/tls", "tokio/fs"]
+
 [dependencies]
-tonic = { version = "0.6", features = ["tls"] }
+tonic = "0.6"
 prost = "0.9"
 tokio = "1.17"
 tokio-stream = "0.1"

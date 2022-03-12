@@ -35,7 +35,7 @@ pub use watch::{
     Event, EventType, WatchCancelRequest, WatchCreateRequest, WatchInbound, WatchOp, WatchResponse,
 };
 
-pub use client::{Client, ClientConfig};
+pub use client::{Client, ClientConfig, Endpoint};
 pub use error::Error;
 
 mod auth;

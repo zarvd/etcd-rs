@@ -1,33 +1,55 @@
 #![allow(dead_code)]
 #![allow(unused_macros)]
 
+use etcd_rs::Endpoint;
 use std::collections::HashMap;
 use std::process::Command;
 
 pub struct EtcdCluster {
-    nodes: HashMap<String, String>,
+    nodes: HashMap<String, Endpoint>,
 }
 
 impl EtcdCluster {
     pub fn new(with_tls: bool) -> Self {
         println!("etcd cluster starting");
-        assert!(Command::new("make")
-            .env("ETCD_CLUSTER_WITH_TLS", with_tls.to_string())
-            .arg("setup-etcd-cluster")
-            .output()
-            .expect("setup etcd cluster")
-            .status
-            .success());
+        {
+            let output = Command::new("make")
+                .env("ETCD_CLUSTER_WITH_TLS", with_tls.to_string())
+                .arg("setup-etcd-cluster")
+                .output()
+                .expect("setup etcd cluster");
+            assert!(
+                output.status.success(),
+                "stdout: {} \nstderr: {}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
         println!("etcd cluster started");
 
         let nodes: HashMap<_, _> = (1..=3)
             .map(|i| {
-                let scheme = if with_tls { "https" } else { "http" };
+                let node = format!("etcd-{}", i);
+                if with_tls {
+                    use std::fs::read;
 
-                (
-                    format!("etcd-{}", i),
-                    format!("{}://127.0.0.1:{}2379", scheme, i),
-                )
+                    let ca_cert = read("./hack/certs/ca.pem").expect("read ca cert");
+                    let client_cert =
+                        read(format!("./hack/certs/{}.pem", node)).expect("read client cert");
+                    let client_key =
+                        read(format!("./hack/certs/{}-key.pem", node)).expect("read client key");
+                    (
+                        node.clone(),
+                        Endpoint::from(format!("https://127.0.0.1:{}2379", i)).tls_raw(
+                            node,
+                            ca_cert,
+                            client_cert,
+                            client_key,
+                        ),
+                    )
+                } else {
+                    (node, format!("http://127.0.0.1:{}2379", i).into())
+                }
             })
             .collect();
 
@@ -44,7 +66,7 @@ impl EtcdCluster {
         println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
     }
 
-    pub fn endpoints(&self) -> Vec<String> {
+    pub fn endpoints(&self) -> Vec<Endpoint> {
         self.nodes.values().cloned().collect()
     }
 

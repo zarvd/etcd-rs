@@ -24,7 +24,10 @@ publish:
 
 .PHONY: setup-etcd-cluster
 setup-etcd-cluster: teardown-etcd-cluster
-	./scripts/generate_etcd_cluster.sh ${ETCD_CLUSTER_DOCKER_COMPOSE} ${ETCD_VERSION} ${ETCD_CLUSTER_WITH_TLS};
+ifneq ("${ETCD_CLUSTER_WITH_TLS}", "false")
+	./hack/generate_etcd_certificate.sh
+endif
+	./hack/generate_etcd_cluster.sh ${ETCD_CLUSTER_DOCKER_COMPOSE} ${ETCD_VERSION} ${ETCD_CLUSTER_WITH_TLS}
 	docker-compose -f ${ETCD_CLUSTER_DOCKER_COMPOSE} up -d
 
 .PHONY: start-etcd-node
@@ -42,12 +45,12 @@ endif
 .PHONY: teardown-etcd-cluster
 teardown-etcd-cluster:
 ifneq ("$(wildcard ${ETCD_CLUSTER_DOCKER_COMPOSE})","")
-	docker-compose -f ${ETCD_CLUSTER_DOCKER_COMPOSE} down;
+	docker-compose -f ${ETCD_CLUSTER_DOCKER_COMPOSE} down
 	rm ${ETCD_CLUSTER_DOCKER_COMPOSE}
 endif
 
 etcd/etcdctl:
-	./scripts/download_etcd.sh
+	./hack/download_etcd.sh
 
 .PHONY: etcd-cluster-status
 etcd-cluster-status: etcd/etcdctl

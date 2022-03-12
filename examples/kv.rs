@@ -45,9 +45,9 @@ async fn get(cli: &Client) -> Result<()> {
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Client::connect(ClientConfig::new([
-        "http://127.0.0.1:12379".to_owned(),
-        "http://127.0.0.1:22379".to_owned(),
-        "http://127.0.0.1:32379".to_owned(),
+        "http://127.0.0.1:12379".into(),
+        "http://127.0.0.1:22379".into(),
+        "http://127.0.0.1:32379".into(),
     ]))
     .await?;
 
