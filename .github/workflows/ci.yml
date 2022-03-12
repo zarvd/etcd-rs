@@ -22,6 +22,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{matrix.rust}}
+      - run: cargo install cargo-nextest
       - run: make test
         shell: bash
 
