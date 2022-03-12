@@ -22,6 +22,13 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{matrix.rust}}
+      - run: |
+          wget https://github.com/cloudflare/cfssl/releases/download/v1.6.1/cfssl_1.6.1_linux_amd64 -O cfssl
+          wget https://github.com/cloudflare/cfssl/releases/download/v1.6.1/cfssljson_1.6.1_linux_amd64 -O cfssljson
+          chmod +x cfssl
+          chmod +x cfssljson
+          sudo mv cfssl /usr/local/bin
+          sudo mv cfssljson /usr/local/bin
       - run: cargo install cargo-nextest
       - run: make test
         shell: bash
