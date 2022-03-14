@@ -377,6 +377,7 @@ impl WatchOp for Client {
                         "should receive created event at first".to_owned(),
                     ));
                 }
+                assert!(resp.events.is_empty(), "received created event {:?}", resp);
                 resp.watch_id
             }
 
@@ -385,21 +386,6 @@ impl WatchOp for Client {
 
         Ok((WatchStream::new(inbound), WatchCanceler::new(watch_id, tx)))
     }
-
-    // async fn cancel_watch<R>(&self, req: R) -> Result<()>
-    // where
-    //     R: Into<WatchCancelRequest> + Send,
-    // {
-    //     println!("canceling watch");
-    //     let req = req.into().into();
-    //     self.watch_client
-    //         .clone()
-    //         .watch(stream::iter(vec![req]))
-    //         .await?;
-    //
-    //     println!("canceled watch");
-    //     Ok(())
-    // }
 }
 
 #[async_trait]

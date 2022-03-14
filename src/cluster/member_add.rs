@@ -7,14 +7,11 @@ pub struct MemberAddRequest {
 }
 
 impl MemberAddRequest {
-    pub fn new<I>(peer_urls: I, is_learner: bool) -> Self
-    where
-        I: Into<Vec<String>>,
-    {
+    pub fn new(peer_urls: impl Into<Vec<String>>, is_learner: bool) -> Self {
         Self {
             proto: etcdserverpb::MemberAddRequest {
                 peer_ur_ls: peer_urls.into(),
-                is_learner: is_learner,
+                is_learner,
             },
         }
     }

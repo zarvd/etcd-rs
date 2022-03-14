@@ -7,10 +7,7 @@ pub struct MemberUpdateRequest {
 }
 
 impl MemberUpdateRequest {
-    pub fn new<I>(member_id: u64, peer_urls: I) -> Self
-    where
-        I: Into<Vec<String>>,
-    {
+    pub fn new(member_id: u64, peer_urls: impl Into<Vec<String>>) -> Self {
         Self {
             proto: etcdserverpb::MemberUpdateRequest {
                 id: member_id,

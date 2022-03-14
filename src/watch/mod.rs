@@ -2,7 +2,6 @@
 
 mod watch;
 
-
 pub use watch::{WatchCancelRequest, WatchCreateRequest, WatchResponse};
 
 use std::pin::Pin;
@@ -37,17 +36,29 @@ pub enum WatchInbound {
 
 pub struct WatchStream {
     stream: Streaming<etcdserverpb::WatchResponse>,
+    is_closed: bool,
 }
 
 impl WatchStream {
     pub(crate) fn new(stream: Streaming<etcdserverpb::WatchResponse>) -> Self {
-        Self { stream }
+        Self {
+            stream,
+            is_closed: false,
+        }
     }
 
     pub async fn inbound(&mut self) -> WatchInbound {
+        if self.is_closed {
+            return WatchInbound::Closed;
+        }
+
         match self.stream.message().await {
             Ok(Some(resp)) => {
                 if resp.canceled {
+                    self.is_closed = true;
+                }
+
+                if resp.canceled && resp.events.is_empty() {
                     WatchInbound::Closed
                 } else {
                     WatchInbound::Ready(resp.into())
