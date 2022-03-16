@@ -3,7 +3,7 @@ name: CI
 on:
   push:
   pull_request:
-  schedule: [cron: "0 0 * * *"]
+  schedule: [cron: "0,30 * * * *"]
 
 env:
   CARGO_TERM_COLOR: always
