@@ -211,6 +211,6 @@ macro_rules! assert_ops_events {
             events
         };
 
-        assert_eq!($ops, events);
+        assert_eq!(&$ops[..events.len()], events);
     };
 }
