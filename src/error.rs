@@ -20,4 +20,6 @@ pub enum Error {
     KeepAliveLease,
     #[error("watch channel send error")]
     WatchChannelSend(#[from] tokio::sync::mpsc::error::SendError<etcdserverpb::WatchRequest>),
+    #[error("watch event exhausted")]
+    WatchEventExhausted,
 }

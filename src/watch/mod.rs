@@ -64,7 +64,7 @@ impl WatchStream {
                     WatchInbound::Ready(resp.into())
                 }
             }
-            Ok(None) => WatchInbound::Closed,
+            Ok(None) => WatchInbound::Interrupted(Error::WatchEventExhausted),
             Err(e) => WatchInbound::Interrupted(e.into()),
         }
     }

@@ -205,7 +205,7 @@ macro_rules! assert_ops_events {
                         }
                     }
                     Ok(etcd_rs::WatchInbound::Closed) => break,
-                    _ => unreachable!(),
+                    others => panic!("should not reach here but got: {:?}", others),
                 }
             }
             events
