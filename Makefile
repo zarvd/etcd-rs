@@ -11,7 +11,7 @@ build:
 
 .PHONY: test
 test:
-	cargo nextest run --test-threads=1
+	cargo nextest run --test-threads=1 --retries 5
 	cargo check --no-default-features
 
 .PHONY: test-one
