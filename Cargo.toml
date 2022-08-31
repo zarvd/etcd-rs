@@ -15,9 +15,9 @@ default = ["tls"]
 tls = ["tonic/tls", "tokio/fs"]
 
 [dependencies]
-tonic = "0.7.1"
-prost = "0.10.1"
-tokio = "1.17"
+tonic = "0.8"
+prost = "0.11"
+tokio = "1.20"
 tokio-stream = "0.1"
 async-trait = "0.1"
 futures = "0.3"
@@ -25,8 +25,8 @@ thiserror = "1.0"
 http = "0.2"
 
 [dev-dependencies]
-tokio = { version = "1.17", features = ["full"] }
+tokio = { version = "1.20", features = ["full"] }
 rand = "0.8"
 
 [build-dependencies]
-tonic-build = "0.7.0"
+tonic-build = "0.8"
