@@ -124,6 +124,7 @@ impl From<mvccpb::event::EventType> for EventType {
 pub struct Event {
     pub event_type: EventType,
     pub kv: KeyValue,
+    pub prev_kv: Option<KeyValue>,
 }
 
 impl From<mvccpb::Event> for Event {
@@ -134,6 +135,7 @@ impl From<mvccpb::Event> for Event {
                 _ => EventType::Delete, // FIXME: assert valid event type
             },
             kv: From::from(proto.kv.expect("must fetch kv")),
+            prev_kv: proto.prev_kv.map(KeyValue::from),
         }
     }
 }
