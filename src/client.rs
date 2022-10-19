@@ -1,6 +1,8 @@
 use std::time::Duration;
 
 use async_trait::async_trait;
+use http::Uri;
+use tokio::sync::mpsc;
 use tokio::sync::mpsc::channel;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{
@@ -10,6 +12,7 @@ use tonic::{
     transport::Channel,
     Request, Status,
 };
+use tower::discover::Change;
 
 use crate::auth::{AuthOp, AuthenticateRequest, AuthenticateResponse};
 use crate::cluster::{
@@ -33,6 +36,8 @@ use crate::proto::etcdserverpb::{
 };
 use crate::watch::{WatchCanceler, WatchCreateRequest, WatchOp, WatchStream};
 use crate::{Error, Result};
+
+const DEFAULT_CHANNEL_BUFFER: usize = 1024;
 
 #[derive(Clone)]
 pub struct TokenInterceptor {
@@ -185,14 +190,18 @@ pub struct Client {
     cluster_client: ClusterClient<InterceptedService<Channel, TokenInterceptor>>,
     maintenance_client: MaintenanceClient<InterceptedService<Channel, TokenInterceptor>>,
     lease_client: LeaseClient<InterceptedService<Channel, TokenInterceptor>>,
+    endpoint_update: mpsc::Sender<Change<Uri, tonic::transport::Endpoint>>,
+    connect_timeout: Duration,
+    http2_keep_alive_interval: Duration,
 }
 
 impl Client {
     pub async fn connect_with_token(cfg: &ClientConfig, token: Option<String>) -> Result<Self> {
         let auth_interceptor = TokenInterceptor::new(token);
 
-        let channel = {
-            let mut endpoints = Vec::with_capacity(cfg.endpoints.len());
+        let (channel, endpoint_update) = {
+            let (channel, update) = Channel::balance_channel(DEFAULT_CHANNEL_BUFFER);
+
             for e in cfg.endpoints.iter() {
                 let mut c = Channel::from_shared(e.url.clone())?
                     .connect_timeout(cfg.connect_timeout)
@@ -205,10 +214,10 @@ impl Client {
                     }
                 }
 
-                endpoints.push(c);
+                update.try_send(Change::Insert(c.uri().clone(), c)).unwrap();
             }
 
-            Channel::balance_list(endpoints.into_iter())
+            (channel, update)
         };
 
         let auth_client = AuthClient::with_interceptor(channel.clone(), auth_interceptor.clone());
@@ -227,6 +236,9 @@ impl Client {
             cluster_client,
             maintenance_client,
             lease_client,
+            endpoint_update,
+            connect_timeout: cfg.connect_timeout,
+            http2_keep_alive_interval: cfg.http2_keep_alive_interval,
         })
     }
 
@@ -245,6 +257,43 @@ impl Client {
             }
             None => Ok(cli),
         }
+    }
+
+    /// Adds an endpoint to the etcd client.
+    ///
+    /// # Errors
+    /// Will return `Err` if the endpoint is invalid or malformed.
+    pub fn add_endpoint(&self, endpoint: Endpoint) -> Result<()> {
+        let mut c = Channel::from_shared(endpoint.url)?
+            .connect_timeout(self.connect_timeout)
+            .http2_keep_alive_interval(self.http2_keep_alive_interval);
+
+        #[cfg(feature = "tls")]
+        {
+            if let TlsOption::WithConfig(tls) = endpoint.tls_opt.clone() {
+                c = c.tls_config(tls)?;
+            }
+        }
+
+        self.endpoint_update
+            .try_send(Change::Insert(c.uri().clone(), c))
+            .unwrap();
+
+        Ok(())
+    }
+
+    /// Removes an endpoint from the etcd client.
+    ///
+    /// # Errors
+    /// Will return `Err` if the endpoint is invalid or malformed.
+    pub fn remove_endpoint(&self, endpoint: Endpoint) -> Result<()> {
+        self.endpoint_update
+            .try_send(Change::Remove(
+                Channel::from_shared(endpoint.url)?.uri().clone(),
+            ))
+            .unwrap();
+
+        Ok(())
     }
 }
 

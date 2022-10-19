@@ -18,6 +18,7 @@ tls = ["tonic/tls", "tokio/fs"]
 tonic = "0.8"
 prost = "0.11"
 tokio = "1.20"
+tower = "0.4"
 tokio-stream = "0.1"
 async-trait = "0.1"
 futures = "0.3"
