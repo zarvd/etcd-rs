@@ -42,7 +42,7 @@ pub struct TokenInterceptor {
 impl TokenInterceptor {
     fn new(token: Option<String>) -> Self {
         Self {
-            token: token.map(|token: String| MetadataValue::from_str(&token).unwrap()),
+            token: token.map(|token: String| MetadataValue::try_from(&token).unwrap()),
         }
     }
 }

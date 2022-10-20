@@ -32,7 +32,8 @@ pub use lease::{
 };
 pub use response_header::ResponseHeader;
 pub use watch::{
-    Event, EventType, WatchCancelRequest, WatchCreateRequest, WatchInbound, WatchOp, WatchResponse,
+    Event, EventType, WatchCancelRequest, WatchCreateRequest, WatchInbound, WatchOp, WatchResponse, WatchStream,
+    WatchCanceler
 };
 
 pub use client::{Client, ClientConfig, Endpoint};
