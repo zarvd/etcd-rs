@@ -96,6 +96,7 @@ impl From<mvccpb::KeyValue> for KeyValue {
 }
 
 /// KeyRange is an abstraction for describing etcd key of various types.
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub struct KeyRange {
     pub key: Vec<u8>,
     pub range_end: Vec<u8>,
