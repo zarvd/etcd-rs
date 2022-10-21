@@ -27,7 +27,7 @@ pub use kv::{
 };
 pub use lease::{
     LeaseGrantRequest, LeaseGrantResponse, LeaseId, LeaseKeepAliveRequest, LeaseKeepAliveResponse,
-    LeaseOp, LeaseRevokeRequest, LeaseRevokeResponse, LeaseTimeToLiveRequest,
+    LeaseOp, LeaseRevokeRequest, LeaseRevokeResponse, LeaseTimeToLiveRequest, LeaseKeepAlive,
     LeaseTimeToLiveResponse,
 };
 pub use response_header::ResponseHeader;
