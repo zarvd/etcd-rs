@@ -416,14 +416,24 @@ impl LeaseOp for Client {
 
         let initial_req = LeaseKeepAliveRequest { id: lease_id };
 
-        req_tx.send(initial_req).await.map_err(|_| Error::ChannelClosed)?;
+        req_tx
+            .send(initial_req)
+            .await
+            .map_err(|_| Error::ChannelClosed)?;
 
-        let resp_rx = self
+        let mut resp_rx = self
             .lease_client
             .clone()
             .lease_keep_alive(req_rx)
             .await?
             .into_inner();
+
+        let lease_id = match resp_rx.message().await? {
+            Some(resp) => resp.id,
+            None => {
+                return Err(Error::CreateWatch);
+            }
+        };
 
         Ok(LeaseKeepAlive::new(lease_id, req_tx, resp_rx))
     }
