@@ -27,6 +27,7 @@ use crate::lease::{
 use crate::proto::etcdserverpb;
 use crate::proto::etcdserverpb::cluster_client::ClusterClient;
 use crate::proto::etcdserverpb::maintenance_client::MaintenanceClient;
+use crate::proto::etcdserverpb::LeaseKeepAliveRequest;
 use crate::proto::etcdserverpb::{
     auth_client::AuthClient, kv_client::KvClient, lease_client::LeaseClient,
     watch_client::WatchClient,
@@ -413,12 +414,26 @@ impl LeaseOp for Client {
 
         let req_rx = ReceiverStream::new(req_rx);
 
-        let resp_rx = self
+        let initial_req = LeaseKeepAliveRequest { id: lease_id };
+
+        req_tx
+            .send(initial_req)
+            .await
+            .map_err(|_| Error::ChannelClosed)?;
+
+        let mut resp_rx = self
             .lease_client
             .clone()
             .lease_keep_alive(req_rx)
             .await?
             .into_inner();
+
+        let lease_id = match resp_rx.message().await? {
+            Some(resp) => resp.id,
+            None => {
+                return Err(Error::CreateWatch);
+            }
+        };
 
         Ok(LeaseKeepAlive::new(lease_id, req_tx, resp_rx))
     }
