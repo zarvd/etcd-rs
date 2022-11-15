@@ -43,7 +43,7 @@ impl From<Duration> for LeaseGrantRequest {
 pub struct LeaseGrantResponse {
     pub header: ResponseHeader,
     pub id: LeaseId,
-    pub ttl: u64,
+    pub ttl: i64,
 }
 
 impl From<crate::proto::etcdserverpb::LeaseGrantResponse> for LeaseGrantResponse {
@@ -51,7 +51,7 @@ impl From<crate::proto::etcdserverpb::LeaseGrantResponse> for LeaseGrantResponse
         Self {
             header: From::from(proto.header.expect("must fetch header")),
             id: proto.id,
-            ttl: proto.ttl as u64,
+            ttl: proto.ttl,
         }
     }
 }
