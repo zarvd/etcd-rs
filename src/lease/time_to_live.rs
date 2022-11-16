@@ -7,19 +7,16 @@ pub struct LeaseTimeToLiveRequest {
 }
 
 impl LeaseTimeToLiveRequest {
-    /// Creates a new LeaseGrantRequest with the specified TTL.
-    pub fn new(id: u64) -> Self {
+    /// Creates a new LeaseTimeToLiveRequest with the specified lease id.
+    pub fn new(id: LeaseId) -> Self {
         Self {
-            proto: etcdserverpb::LeaseTimeToLiveRequest {
-                id: id as i64,
-                keys: false,
-            },
+            proto: etcdserverpb::LeaseTimeToLiveRequest { id, keys: false },
         }
     }
 
     /// Set custom lease ID.
     pub fn with_id(mut self, id: LeaseId) -> Self {
-        self.proto.id = id as i64;
+        self.proto.id = id;
         self
     }
 
@@ -35,9 +32,9 @@ impl From<LeaseTimeToLiveRequest> for crate::proto::etcdserverpb::LeaseTimeToLiv
     }
 }
 
-impl From<u64> for LeaseTimeToLiveRequest {
-    fn from(watch_id: u64) -> Self {
-        Self::new(watch_id)
+impl From<LeaseId> for LeaseTimeToLiveRequest {
+    fn from(lease_id: LeaseId) -> Self {
+        Self::new(lease_id)
     }
 }
 
@@ -45,7 +42,7 @@ impl From<u64> for LeaseTimeToLiveRequest {
 pub struct LeaseTimeToLiveResponse {
     pub header: ResponseHeader,
     pub id: LeaseId,
-    pub ttl: u64,
+    pub ttl: i64,
 }
 
 impl From<crate::proto::etcdserverpb::LeaseTimeToLiveResponse> for LeaseTimeToLiveResponse {
@@ -53,7 +50,7 @@ impl From<crate::proto::etcdserverpb::LeaseTimeToLiveResponse> for LeaseTimeToLi
         Self {
             header: From::from(proto.header.expect("must fetch header")),
             id: proto.id,
-            ttl: proto.ttl as u64,
+            ttl: proto.ttl,
         }
     }
 }
