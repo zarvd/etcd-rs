@@ -363,11 +363,12 @@ impl WatchOp for Client {
 
         tx.send(req.into().into()).await?;
 
-        let resp = self
-            .watch_client
-            .clone()
-            .watch(ReceiverStream::new(rx))
-            .await?;
+        let mut req = tonic::Request::new(ReceiverStream::new(rx));
+
+        req.metadata_mut()
+            .insert("hasleader", "true".try_into().unwrap());
+
+        let resp = self.watch_client.clone().watch(req).await?;
 
         let mut inbound = resp.into_inner();
 
