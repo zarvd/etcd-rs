@@ -54,7 +54,7 @@ Add following dependencies in your project `cargo.toml`:
 
 ```toml
 [dependencies]
-etcd-rs = "1.0.0-alpha.3"
+etcd-rs = "1.0.0"
 ```
 
 ```rust
