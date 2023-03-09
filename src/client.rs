@@ -189,9 +189,32 @@ pub struct Client {
 }
 
 impl Client {
-    pub async fn connect_with_token(cfg: &ClientConfig, token: Option<String>) -> Result<Self> {
+    /// Build clients from tonic [`Channel`] directly.
+    ///
+    /// For advanced users, it provides the ability to control more details about the connection.
+    pub fn with_channel(channel: Channel, token: Option<String>) -> Self {
         let auth_interceptor = TokenInterceptor::new(token);
 
+        let auth_client = AuthClient::with_interceptor(channel.clone(), auth_interceptor.clone());
+        let kv_client = KvClient::with_interceptor(channel.clone(), auth_interceptor.clone());
+        let watch_client = WatchClient::with_interceptor(channel.clone(), auth_interceptor.clone());
+        let cluster_client =
+            ClusterClient::with_interceptor(channel.clone(), auth_interceptor.clone());
+        let maintenance_client =
+            MaintenanceClient::with_interceptor(channel.clone(), auth_interceptor.clone());
+        let lease_client = LeaseClient::with_interceptor(channel, auth_interceptor);
+
+        Self {
+            auth_client,
+            kv_client,
+            watch_client,
+            cluster_client,
+            maintenance_client,
+            lease_client,
+        }
+    }
+
+    pub async fn connect_with_token(cfg: &ClientConfig, token: Option<String>) -> Result<Self> {
         let channel = {
             let mut endpoints = Vec::with_capacity(cfg.endpoints.len());
             for e in cfg.endpoints.iter() {
@@ -212,23 +235,7 @@ impl Client {
             Channel::balance_list(endpoints.into_iter())
         };
 
-        let auth_client = AuthClient::with_interceptor(channel.clone(), auth_interceptor.clone());
-        let kv_client = KvClient::with_interceptor(channel.clone(), auth_interceptor.clone());
-        let watch_client = WatchClient::with_interceptor(channel.clone(), auth_interceptor.clone());
-        let cluster_client =
-            ClusterClient::with_interceptor(channel.clone(), auth_interceptor.clone());
-        let maintenance_client =
-            MaintenanceClient::with_interceptor(channel.clone(), auth_interceptor.clone());
-        let lease_client = LeaseClient::with_interceptor(channel, auth_interceptor);
-
-        Ok(Self {
-            auth_client,
-            kv_client,
-            watch_client,
-            cluster_client,
-            maintenance_client,
-            lease_client,
-        })
+        Ok(Self::with_channel(channel, token))
     }
 
     /// Connects to etcd cluster and returns a client.
