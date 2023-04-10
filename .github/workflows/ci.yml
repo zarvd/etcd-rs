@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
+    branches: [ "master" ]
   pull_request:
+    branches: [ "master" ]
   schedule: [cron: "0 */6 * * *"]
 
 env:
@@ -33,7 +35,11 @@ jobs:
           chmod +x cfssljson
           sudo mv cfssl /usr/local/bin
           sudo mv cfssljson /usr/local/bin
-      - run: cargo install cargo-nextest
+      - name: Install cargo-nextest
+        uses: baptiste0928/cargo-install@v1
+        with:
+          crate: cargo-nextest
+          locked: true
       - run: make test
         shell: bash
 
