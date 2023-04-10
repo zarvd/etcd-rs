@@ -18,7 +18,7 @@ use async_trait::async_trait;
 use tokio::sync::mpsc::Sender;
 use tonic::Streaming;
 
-use crate::Result;
+use crate::{Error, Result};
 
 pub type LeaseId = i64;
 
@@ -69,7 +69,7 @@ impl LeaseKeepAlive {
         self.req_tx
             .send(req.into())
             .await
-            .expect("emit keep alive request to channel");
+            .map_err(|_| Error::ChannelClosed)?;
 
         Ok(match self.resp_rx.message().await? {
             Some(resp) => Some(resp.into()),
