@@ -26,9 +26,9 @@ impl From<etcdserverpb::AuthenticateRequest> for AuthenticateRequest {
     }
 }
 
-impl Into<etcdserverpb::AuthenticateRequest> for AuthenticateRequest {
-    fn into(self) -> etcdserverpb::AuthenticateRequest {
-        self.proto
+impl From<AuthenticateRequest> for etcdserverpb::AuthenticateRequest {
+    fn from(value: AuthenticateRequest) -> Self {
+        value.proto
     }
 }
 

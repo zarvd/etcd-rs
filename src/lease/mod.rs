@@ -71,9 +71,6 @@ impl LeaseKeepAlive {
             .await
             .map_err(|_| Error::ChannelClosed)?;
 
-        Ok(match self.resp_rx.message().await? {
-            Some(resp) => Some(resp.into()),
-            None => None,
-        })
+        Ok(self.resp_rx.message().await?.map(|resp| resp.into()))
     }
 }

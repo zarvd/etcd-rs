@@ -24,6 +24,12 @@ impl From<MemberListRequest> for etcdserverpb::MemberListRequest {
     }
 }
 
+impl Default for MemberListRequest {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct MemberListResponse {
     pub header: ResponseHeader,

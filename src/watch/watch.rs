@@ -41,16 +41,17 @@ impl WatchCreateRequest {
         self
     }
 }
-impl Into<etcdserverpb::WatchCreateRequest> for WatchCreateRequest {
-    fn into(self) -> etcdserverpb::WatchCreateRequest {
-        self.proto
+
+impl From<WatchCreateRequest> for etcdserverpb::WatchCreateRequest {
+    fn from(value: WatchCreateRequest) -> Self {
+        value.proto
     }
 }
 
-impl Into<etcdserverpb::WatchRequest> for WatchCreateRequest {
-    fn into(self) -> etcdserverpb::WatchRequest {
+impl From<WatchCreateRequest> for etcdserverpb::WatchRequest {
+    fn from(value: WatchCreateRequest) -> Self {
         etcdserverpb::WatchRequest {
-            request_union: Some(RequestUnion::CreateRequest(self.into())),
+            request_union: Some(RequestUnion::CreateRequest(value.into())),
         }
     }
 }
@@ -81,16 +82,16 @@ impl From<i64> for WatchCancelRequest {
     }
 }
 
-impl Into<etcdserverpb::WatchCancelRequest> for WatchCancelRequest {
-    fn into(self) -> etcdserverpb::WatchCancelRequest {
-        self.proto
+impl From<WatchCancelRequest> for etcdserverpb::WatchCancelRequest {
+    fn from(value: WatchCancelRequest) -> Self {
+        value.proto
     }
 }
 
-impl Into<etcdserverpb::WatchRequest> for WatchCancelRequest {
-    fn into(self) -> etcdserverpb::WatchRequest {
+impl From<WatchCancelRequest> for etcdserverpb::WatchRequest {
+    fn from(value: WatchCancelRequest) -> Self {
         etcdserverpb::WatchRequest {
-            request_union: Some(RequestUnion::CancelRequest(self.into())),
+            request_union: Some(RequestUnion::CancelRequest(value.into())),
         }
     }
 }

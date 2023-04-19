@@ -98,7 +98,7 @@ impl WatchCanceler {
         self.tx
             .send(WatchCancelRequest::new(self.watch_id).into())
             .await
-            .map_err(|e| Error::WatchChannelSend(e))
+            .map_err(Error::WatchChannelSend)
     }
 }
 
