@@ -5,8 +5,6 @@ use tokio::time::timeout;
 
 use etcd_rs::*;
 
-#[macro_use]
-mod support;
 use crate::support::{Context, KVOp};
 
 async fn put_and_get(cli: &Client, retry: usize) {

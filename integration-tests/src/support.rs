@@ -13,9 +13,9 @@ impl EtcdCluster {
     pub fn new(with_tls: bool) -> Self {
         println!("etcd cluster starting");
         {
-            let output = Command::new("make")
-                .env("ETCD_CLUSTER_WITH_TLS", with_tls.to_string())
+            let output = Command::new("just")
                 .arg("setup-etcd-cluster")
+                .arg(with_tls.to_string())
                 .output()
                 .expect("setup etcd cluster");
             assert!(
@@ -57,7 +57,7 @@ impl EtcdCluster {
     }
 
     pub fn print_status(&self) {
-        let output = Command::new("make")
+        let output = Command::new("just")
             .arg("etcd-cluster-status")
             .output()
             .expect("fetch etcd cluster status");
@@ -79,9 +79,9 @@ impl EtcdCluster {
             caller.line(),
             i
         );
-        assert!(Command::new("make")
-            .env("ETCD_NODE", format!("etcd-{}", i))
+        assert!(Command::new("just")
             .arg("start-etcd-node")
+            .arg(format!("etcd-{}", i))
             .output()
             .expect("start etcd node")
             .status
@@ -103,9 +103,9 @@ impl EtcdCluster {
             caller.line(),
             i
         );
-        assert!(Command::new("make")
-            .env("ETCD_NODE", format!("etcd-{}", i))
+        assert!(Command::new("just")
             .arg("stop-etcd-node")
+            .arg(format!("etcd-{}", i))
             .output()
             .expect("stop etcd node")
             .status
@@ -122,7 +122,7 @@ impl EtcdCluster {
 impl Drop for EtcdCluster {
     fn drop(&mut self) {
         println!("etcd cluster stopping");
-        assert!(Command::new("make")
+        assert!(Command::new("just")
             .arg("teardown-etcd-cluster")
             .output()
             .expect("teardown etcd cluster")
