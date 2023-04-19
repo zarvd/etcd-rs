@@ -34,6 +34,7 @@ etcdctl:
     ./hack/download_etcd.sh
 
 setup-etcd-cluster tls="false" version="v3.5.2": teardown-etcd-cluster
+    {{ if tls != "false" { "./hack/generate_etcd_certificate.sh" } else { "" } }}
     ./hack/generate_etcd_cluster.sh {{ DOCKER_COMPOSE_SPEC }} {{ version }} {{ tls }}
     docker-compose -f {{ DOCKER_COMPOSE_SPEC }} up -d
 
