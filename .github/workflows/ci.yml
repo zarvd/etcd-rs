@@ -35,6 +35,11 @@ jobs:
           chmod +x cfssljson
           sudo mv cfssl /usr/local/bin
           sudo mv cfssljson /usr/local/bin
+      - name: Install cargo-nextest
+        uses: baptiste0928/cargo-install@v1
+        with:
+          crate: cargo-nextest
+          locked: true
       - name: Install just
         uses: extractions/setup-just@v1
       - name: Run tests
