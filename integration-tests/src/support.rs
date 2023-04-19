@@ -33,11 +33,11 @@ impl EtcdCluster {
                 if with_tls {
                     use std::fs::read;
 
-                    let ca_cert = read("./hack/certs/ca.pem").expect("read ca cert");
+                    let ca_cert = read("../hack/certs/ca.pem").expect("read ca cert");
                     let client_cert =
-                        read(format!("./hack/certs/{}.pem", node)).expect("read client cert");
+                        read(format!("../hack/certs/{}.pem", node)).expect("read client cert");
                     let client_key =
-                        read(format!("./hack/certs/{}-key.pem", node)).expect("read client key");
+                        read(format!("../hack/certs/{}-key.pem", node)).expect("read client key");
                     (
                         node.clone(),
                         Endpoint::from(format!("https://127.0.0.1:{}2379", i)).tls_raw(
