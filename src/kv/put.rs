@@ -30,7 +30,7 @@ impl PutRequest {
     /// Sets the lease ID to associate with the key in the key-value store.
     /// A lease value of 0 indicates no lease.
     pub fn lease(mut self, lease: LeaseId) -> Self {
-        self.proto.lease = lease as i64;
+        self.proto.lease = lease;
         self
     }
 

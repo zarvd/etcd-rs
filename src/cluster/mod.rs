@@ -51,14 +51,14 @@ impl From<etcdserverpb::Member> for Member {
     }
 }
 
-impl Into<etcdserverpb::Member> for Member {
-    fn into(self) -> etcdserverpb::Member {
+impl From<Member> for etcdserverpb::Member {
+    fn from(value: Member) -> Self {
         etcdserverpb::Member {
-            id: self.id,
-            name: self.name,
-            peer_ur_ls: self.peer_urls,
-            client_ur_ls: self.client_urls,
-            is_learner: self.is_learner,
+            id: value.id,
+            name: value.name,
+            peer_ur_ls: value.peer_urls,
+            client_ur_ls: value.client_urls,
+            is_learner: value.is_learner,
         }
     }
 }

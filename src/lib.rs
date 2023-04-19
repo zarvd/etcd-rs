@@ -46,7 +46,6 @@ mod error;
 mod kv;
 mod lease;
 mod lock;
-mod maintenance;
 mod proto;
 mod response_header;
 mod watch;

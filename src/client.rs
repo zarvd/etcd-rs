@@ -26,7 +26,6 @@ use crate::lease::{
 };
 use crate::proto::etcdserverpb;
 use crate::proto::etcdserverpb::cluster_client::ClusterClient;
-use crate::proto::etcdserverpb::maintenance_client::MaintenanceClient;
 use crate::proto::etcdserverpb::LeaseKeepAliveRequest;
 use crate::proto::etcdserverpb::{
     auth_client::AuthClient, kv_client::KvClient, lease_client::LeaseClient,
@@ -184,7 +183,6 @@ pub struct Client {
     kv_client: KvClient<InterceptedService<Channel, TokenInterceptor>>,
     watch_client: WatchClient<InterceptedService<Channel, TokenInterceptor>>,
     cluster_client: ClusterClient<InterceptedService<Channel, TokenInterceptor>>,
-    maintenance_client: MaintenanceClient<InterceptedService<Channel, TokenInterceptor>>,
     lease_client: LeaseClient<InterceptedService<Channel, TokenInterceptor>>,
 }
 
@@ -200,8 +198,6 @@ impl Client {
         let watch_client = WatchClient::with_interceptor(channel.clone(), auth_interceptor.clone());
         let cluster_client =
             ClusterClient::with_interceptor(channel.clone(), auth_interceptor.clone());
-        let maintenance_client =
-            MaintenanceClient::with_interceptor(channel.clone(), auth_interceptor.clone());
         let lease_client = LeaseClient::with_interceptor(channel, auth_interceptor);
 
         Self {
@@ -209,7 +205,6 @@ impl Client {
             kv_client,
             watch_client,
             cluster_client,
-            maintenance_client,
             lease_client,
         }
     }

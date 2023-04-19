@@ -75,18 +75,18 @@ pub enum SortOrder {
     Descending,
 }
 
-impl Into<etcdserverpb::range_request::SortOrder> for SortOrder {
-    fn into(self) -> etcdserverpb::range_request::SortOrder {
-        match self {
+impl From<SortOrder> for etcdserverpb::range_request::SortOrder {
+    fn from(value: SortOrder) -> Self {
+        match value {
             SortOrder::Ascending => etcdserverpb::range_request::SortOrder::Ascend,
             SortOrder::Descending => etcdserverpb::range_request::SortOrder::Descend,
         }
     }
 }
 
-impl Into<i32> for SortOrder {
-    fn into(self) -> i32 {
-        let order: etcdserverpb::range_request::SortOrder = self.into();
+impl From<SortOrder> for i32 {
+    fn from(value: SortOrder) -> Self {
+        let order: etcdserverpb::range_request::SortOrder = value.into();
         order as i32
     }
 }

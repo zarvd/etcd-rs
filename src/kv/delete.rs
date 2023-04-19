@@ -39,9 +39,9 @@ where
     }
 }
 
-impl Into<etcdserverpb::DeleteRangeRequest> for DeleteRequest {
-    fn into(self) -> etcdserverpb::DeleteRangeRequest {
-        self.proto
+impl From<DeleteRequest> for etcdserverpb::DeleteRangeRequest {
+    fn from(value: DeleteRequest) -> Self {
+        value.proto
     }
 }
 
