@@ -4,8 +4,6 @@ use tonic::Code;
 
 use etcd_rs::*;
 
-#[macro_use]
-mod support;
 use crate::support::Context;
 
 #[tokio::test]

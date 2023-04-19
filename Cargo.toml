@@ -26,7 +26,6 @@ http = "0.2"
 
 [dev-dependencies]
 tokio = { version = "1.27", features = ["full"] }
-rand = "0.8"
 
 [build-dependencies]
 tonic-build = "0.9"

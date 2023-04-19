@@ -11,19 +11,19 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test:
-    name: Unit test using ${{matrix.rust}}
+  integration-test:
+    name: Integration test
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        rust: [nightly, beta, stable]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
         with:
-          toolchain: ${{matrix.rust}}
+          toolchain: stable
+          components: clippy
+          override: true
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
         with:
@@ -40,15 +40,21 @@ jobs:
         with:
           crate: cargo-nextest
           locked: true
-      - run: make test
-        shell: bash
+      - name: Install just
+        uses: extractions/setup-just@v1
+      - name: Run tests
+        run: |
+          just integration-test
 
-  clippy:
+  lint:
     name: Coding style check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           components: clippy
@@ -57,7 +63,9 @@ jobs:
         uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features
+      - name: Install just
+        uses: extractions/setup-just@v1
+      - name: Run lint
+        run: |
+          just lint
+

@@ -1,0 +1,13 @@
+[package]
+name = "etcd-rs-integration-tests"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+etcd-rs = { path = "../", features = ["tls"] }
+tokio = { version = "1.27", features = ["full"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing = "0.1"
+rand = "0.8"
+tonic = "0.9"
