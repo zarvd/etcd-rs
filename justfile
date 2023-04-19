@@ -24,6 +24,7 @@ unit-test:
 # Run integration tests
 integration-test:
     #!/usr/bin/env bash
+    set -e
     pushd integration-tests
     cargo nextest run --test-threads=1 --retries 5
     popd
