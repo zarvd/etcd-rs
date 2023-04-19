@@ -32,7 +32,7 @@ use crate::proto::etcdserverpb::{
     auth_client::AuthClient, kv_client::KvClient, lease_client::LeaseClient,
     watch_client::WatchClient,
 };
-use crate::watch::{WatchCanceler, WatchCreateRequest, WatchOp, WatchStream};
+use crate::watch::{WatchCreateRequest, WatchOp, WatchStream};
 use crate::{Error, Result};
 
 #[derive(Clone)]
@@ -362,38 +362,33 @@ impl KeyValueOp for Client {
 
 #[async_trait]
 impl WatchOp for Client {
-    async fn watch<R>(&self, req: R) -> Result<(WatchStream, WatchCanceler)>
+    async fn watch<R>(&self, req: R) -> Result<WatchStream>
     where
         R: Into<WatchCreateRequest> + Send,
     {
-        let (tx, rx) = channel::<etcdserverpb::WatchRequest>(128);
+        let (req_tx, req_rx) = channel::<etcdserverpb::WatchRequest>(128);
 
-        tx.send(req.into().into()).await?;
+        req_tx.send(req.into().into()).await?;
 
-        let mut req = tonic::Request::new(ReceiverStream::new(rx));
-
-        req.metadata_mut()
-            .insert("hasleader", "true".try_into().unwrap());
-
-        let resp = self.watch_client.clone().watch(req).await?;
-
+        let streaming_reqs = {
+            let mut r = Request::new(ReceiverStream::new(req_rx));
+            r.metadata_mut()
+                .insert("hasleader", "true".try_into().unwrap());
+            r
+        };
+        let resp = self.watch_client.clone().watch(streaming_reqs).await?;
         let mut inbound = resp.into_inner();
-
         let watch_id = match inbound.message().await? {
-            Some(resp) => {
-                if !resp.created {
-                    return Err(Error::WatchEvent(
-                        "should receive created event at first".to_owned(),
-                    ));
-                }
-                assert!(resp.events.is_empty(), "received created event {:?}", resp);
-                resp.watch_id
+            Some(resp) if !resp.created => {
+                return Err(Error::WatchEvent(
+                    "should receive created event at first".to_owned(),
+                ))
             }
-
+            Some(resp) => resp.watch_id,
             None => return Err(Error::CreateWatch),
         };
 
-        Ok((WatchStream::new(inbound), WatchCanceler::new(watch_id, tx)))
+        Ok(WatchStream::new(watch_id, req_tx, inbound))
     }
 }
 

@@ -9,7 +9,7 @@ async fn main() -> Result<()> {
     ]))
     .await?;
 
-    let (mut stream, cancel) = cli
+    let mut stream = cli
         .watch(KeyRange::prefix("foo"))
         .await
         .expect("watch by prefix");
@@ -22,8 +22,6 @@ async fn main() -> Result<()> {
         cli.put(("foo2", "5")).await.expect("put kv");
         cli.delete("foo1").await.expect("delete kv");
         cli.delete("bar").await.expect("delete kv");
-
-        cancel.cancel().await.expect("cancel watch");
     });
 
     loop {

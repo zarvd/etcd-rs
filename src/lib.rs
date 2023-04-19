@@ -26,14 +26,14 @@ pub use kv::{
     TxnResponse,
 };
 pub use lease::{
-    LeaseGrantRequest, LeaseGrantResponse, LeaseId, LeaseKeepAliveRequest, LeaseKeepAliveResponse,
-    LeaseOp, LeaseRevokeRequest, LeaseRevokeResponse, LeaseTimeToLiveRequest, LeaseKeepAlive,
-    LeaseTimeToLiveResponse,
+    LeaseGrantRequest, LeaseGrantResponse, LeaseId, LeaseKeepAlive, LeaseKeepAliveRequest,
+    LeaseKeepAliveResponse, LeaseOp, LeaseRevokeRequest, LeaseRevokeResponse,
+    LeaseTimeToLiveRequest, LeaseTimeToLiveResponse,
 };
 pub use response_header::ResponseHeader;
 pub use watch::{
-    Event, EventType, WatchCancelRequest, WatchCreateRequest, WatchInbound, WatchOp, WatchResponse, WatchStream,
-    WatchCanceler
+    Event, EventType, WatchCancelRequest, WatchCreateRequest, WatchInbound, WatchOp, WatchResponse,
+    WatchStream,
 };
 
 pub use client::{Client, ClientConfig, Endpoint};

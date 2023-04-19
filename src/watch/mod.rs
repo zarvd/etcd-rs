@@ -18,13 +18,9 @@ use crate::{Error, KeyValue, Result};
 
 #[async_trait]
 pub trait WatchOp {
-    async fn watch<R>(&self, req: R) -> Result<(WatchStream, WatchCanceler)>
+    async fn watch<R>(&self, req: R) -> Result<WatchStream>
     where
         R: Into<WatchCreateRequest> + Send;
-
-    // async fn cancel_watch<R>(&self, req: R) -> Result<()>
-    // where
-    //     R: Into<WatchCancelRequest> + Send;
 }
 
 #[derive(Debug)]
@@ -35,29 +31,27 @@ pub enum WatchInbound {
 }
 
 pub struct WatchStream {
-    stream: Streaming<etcdserverpb::WatchResponse>,
-    is_closed: bool,
+    watch_id: i64,
+    req_tx: Sender<etcdserverpb::WatchRequest>,
+    resp_rx: Streaming<etcdserverpb::WatchResponse>,
 }
 
 impl WatchStream {
-    pub(crate) fn new(stream: Streaming<etcdserverpb::WatchResponse>) -> Self {
+    pub(crate) fn new(
+        watch_id: i64,
+        req_tx: Sender<etcdserverpb::WatchRequest>,
+        resp_rx: Streaming<etcdserverpb::WatchResponse>,
+    ) -> Self {
         Self {
-            stream,
-            is_closed: false,
+            watch_id,
+            req_tx,
+            resp_rx,
         }
     }
 
     pub async fn inbound(&mut self) -> WatchInbound {
-        if self.is_closed {
-            return WatchInbound::Closed;
-        }
-
-        match self.stream.message().await {
+        match self.resp_rx.message().await {
             Ok(Some(resp)) => {
-                if resp.canceled {
-                    self.is_closed = true;
-                }
-
                 if resp.canceled && resp.events.is_empty() {
                     WatchInbound::Closed
                 } else {
@@ -74,7 +68,7 @@ impl Stream for WatchStream {
     type Item = WatchInbound;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        Pin::new(&mut self.get_mut().stream)
+        Pin::new(&mut self.get_mut().resp_rx)
             .poll_next(cx)
             .map(|e| match e {
                 Some(Ok(resp)) => Some(WatchInbound::Ready(resp.into())),
@@ -84,21 +78,11 @@ impl Stream for WatchStream {
     }
 }
 
-pub struct WatchCanceler {
-    watch_id: i64,
-    tx: Sender<etcdserverpb::WatchRequest>,
-}
-
-impl WatchCanceler {
-    pub(crate) fn new(watch_id: i64, tx: Sender<etcdserverpb::WatchRequest>) -> Self {
-        Self { watch_id, tx }
-    }
-
-    pub async fn cancel(self) -> Result<()> {
-        self.tx
-            .send(WatchCancelRequest::new(self.watch_id).into())
-            .await
-            .map_err(|e| Error::WatchChannelSend(e))
+impl Drop for WatchStream {
+    fn drop(&mut self) {
+        let _ = self
+            .req_tx
+            .blocking_send(WatchCancelRequest::new(self.watch_id).into());
     }
 }
 

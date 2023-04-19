@@ -11,7 +11,7 @@ async fn test_watch() {
 
     const PREFIX: &str = "prefix-test-watch";
 
-    let (mut stream, cancel) = cli
+    let mut stream = cli
         .watch(KeyRange::prefix(PREFIX))
         .await
         .expect("watch created");
@@ -32,8 +32,6 @@ async fn test_watch() {
 
     apply_kv_ops!(cli, ops);
 
-    cancel.cancel().await.expect("watch canceled");
-
     assert_ops_events!(ops, stream);
 }
 
@@ -45,11 +43,11 @@ async fn test_watch_multi() {
     const PREFIX1: &str = "prefix-test-watch-multi1";
     const PREFIX2: &str = "prefix-test-watch-multi2";
 
-    let (mut stream1, cancel1) = cli
+    let mut stream1 = cli
         .watch(KeyRange::prefix(PREFIX1))
         .await
         .expect("watch created");
-    let (mut stream2, cancel2) = cli
+    let mut stream2 = cli
         .watch(KeyRange::prefix(PREFIX2))
         .await
         .expect("watch created");
@@ -85,9 +83,6 @@ async fn test_watch_multi() {
 
     apply_kv_ops!(cli, ops_1);
     apply_kv_ops!(cli, ops_2);
-
-    cancel1.cancel().await.expect("watch canceled");
-    cancel2.cancel().await.expect("watch canceled");
 
     assert_ops_events!(ops_1, stream1);
     assert_ops_events!(ops_2, stream2);
