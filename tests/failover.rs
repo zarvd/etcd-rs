@@ -175,5 +175,6 @@ async fn test_watch_when_cluster_down() {
 
     apply_kv_ops!(cli, ops);
 
+    stream.cancel().await;
     assert_ops_events!(ops, stream);
 }

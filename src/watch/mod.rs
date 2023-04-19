@@ -49,6 +49,13 @@ impl WatchStream {
         }
     }
 
+    pub async fn cancel(&self) {
+        let _ = self
+            .req_tx
+            .send(WatchCancelRequest::new(self.watch_id).into())
+            .await;
+    }
+
     pub async fn inbound(&mut self) -> WatchInbound {
         match self.resp_rx.message().await {
             Ok(Some(resp)) => {

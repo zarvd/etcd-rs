@@ -32,6 +32,7 @@ async fn test_watch() {
 
     apply_kv_ops!(cli, ops);
 
+    stream.cancel().await;
     assert_ops_events!(ops, stream);
 }
 
@@ -84,6 +85,8 @@ async fn test_watch_multi() {
     apply_kv_ops!(cli, ops_1);
     apply_kv_ops!(cli, ops_2);
 
+    stream1.cancel().await;
+    stream2.cancel().await;
     assert_ops_events!(ops_1, stream1);
     assert_ops_events!(ops_2, stream2);
 }
