@@ -249,6 +249,25 @@ impl Client {
             None => Ok(cli),
         }
     }
+
+    pub fn max_decoding_message_size(mut self, limit: usize) -> Self {
+        self.auth_client = self.auth_client.max_decoding_message_size(limit);
+        self.kv_client = self.kv_client.max_decoding_message_size(limit);
+        self.watch_client = self.watch_client.max_decoding_message_size(limit);
+        self.cluster_client = self.cluster_client.max_decoding_message_size(limit);
+        self.lease_client = self.lease_client.max_decoding_message_size(limit);
+
+        self
+    }
+    pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
+        self.auth_client = self.auth_client.max_encoding_message_size(limit);
+        self.kv_client = self.kv_client.max_encoding_message_size(limit);
+        self.watch_client = self.watch_client.max_encoding_message_size(limit);
+        self.cluster_client = self.cluster_client.max_encoding_message_size(limit);
+        self.lease_client = self.lease_client.max_encoding_message_size(limit);
+
+        self
+    }
 }
 
 #[async_trait]
