@@ -250,6 +250,7 @@ impl Client {
         }
     }
 
+    // Set gRPC maximum size of a decoded message
     pub fn max_decoding_message_size(mut self, limit: usize) -> Self {
         self.auth_client = self.auth_client.max_decoding_message_size(limit);
         self.kv_client = self.kv_client.max_decoding_message_size(limit);
@@ -259,6 +260,8 @@ impl Client {
 
         self
     }
+
+    // Set gRPC maximum size of an encoded message
     pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
         self.auth_client = self.auth_client.max_encoding_message_size(limit);
         self.kv_client = self.kv_client.max_encoding_message_size(limit);
